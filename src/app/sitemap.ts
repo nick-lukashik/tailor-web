@@ -26,16 +26,10 @@ function localized(path: string, extra: Omit<Entry, 'url'> = {}): MetadataRoute.
     }))
 }
 
-/** Every page; content from a backend (next-example: notes) is added per request. */
-export default function sitemap(): MetadataRoute.Sitemap {
-    return [
-        ...localized('/', {
-            changeFrequency: 'weekly',
-            priority: 1,
-        }),
-        ...localized('/about', {
-            changeFrequency: 'monthly',
-            priority: 0.8,
-        }),
-    ]
+/** Only the public page: applications are private work (noindex, see src/app/applications/layout.tsx). */
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+    return localized('/', {
+        changeFrequency: 'weekly',
+        priority: 1,
+    })
 }

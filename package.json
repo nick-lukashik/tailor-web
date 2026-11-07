@@ -1,5 +1,5 @@
 {
-    "name": "next-starter",
+    "name": "tailor-web",
     "version": "0.1.0",
     "private": true,
     "type": "module",
@@ -18,12 +18,18 @@
         "test": "vitest run",
         "test:watch": "vitest",
         "test:e2e": "playwright test",
+        "test:e2e:real": "playwright test --project=real-api",
         "verify": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
-        "env:local": "node scripts/env-local.mjs"
+        "env:local": "node scripts/env-local.mjs",
+        "api:types": "node scripts/api-types.mjs",
+        "mock:api": "node e2e/mock-api/server.ts"
     },
     "dependencies": {
+        "@tanstack/react-query": "5.105.0",
+        "@tanstack/react-query-devtools": "5.105.0",
         "class-variance-authority": "0.7.1",
         "cn": "0.5.1",
+        "lucide-react": "1.65.0",
         "next": "16.4.3",
         "next-intl": "4.14.9",
         "pino": "10.4.0",
@@ -31,6 +37,7 @@
         "react": "19.3.1",
         "react-dom": "19.3.1",
         "server-only": "0.0.1",
+        "sonner": "2.0.8",
         "zod": "4.6.7"
     },
     "devDependencies": {

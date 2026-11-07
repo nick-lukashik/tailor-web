@@ -29,10 +29,25 @@
             "groupName": "Node.js"
         },
         {
+            "description": "openapi-typescript 7 needs the TypeScript 5 JS API (scripts/api-types.mjs).",
+            "matchFileNames": ["scripts/api-types.mjs"],
+            "matchDepNames": ["typescript"],
+            "allowedVersions": "<6"
+        },
+        {
             "description": "Org reusable workflows follow the moving major tag @v1 (docs/ci.md in nick-lukashik/.github); never pin them to a digest.",
             "matchManagers": ["github-actions"],
             "matchDepNames": ["nick-lukashik/.github"],
             "pinDigests": false
+        }
+    ],
+    "customManagers": [
+        {
+            "description": "Pinned `pnpm dlx` packages in scripts/api-types.mjs.",
+            "customType": "regex",
+            "managerFilePatterns": ["/^scripts/api-types\\.mjs$/"],
+            "matchStrings": ["--package=(?<depName>[a-z@/.-]+)@(?<currentValue>\\d+\\.\\d+\\.\\d+)"],
+            "datasourceTemplate": "npm"
         }
     ]
 }

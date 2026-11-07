@@ -18,14 +18,23 @@ test.describe('SEO and security', () => {
         expect(text).toContain(`Sitemap: ${baseURL}/sitemap.xml`)
     })
 
-    test('sitemap.xml lists every page per language', async ({ request, baseURL }) => {
+    test('sitemap.xml lists the home page per language and no applications', async ({ request, baseURL }) => {
         const response = await request.get('/sitemap.xml')
         expect(response.headers()['content-type']).toContain('xml')
         const xml = await response.text()
         expect(xml).toContain(`<loc>${baseURL}/?lang=en</loc>`)
-        expect(xml).toContain(`<loc>${baseURL}/about?lang=en</loc>`)
-        expect(xml).toContain(`<loc>${baseURL}/about?lang=ru</loc>`)
-        expect(xml).toContain(`hreflang="x-default" href="${baseURL}/about"`)
+        expect(xml).toContain(`<loc>${baseURL}/?lang=ru</loc>`)
+        expect(xml).not.toContain('/applications')
+    })
+
+    test('applications are never indexed, even with ROBOTS=index', async ({ page }) => {
+        for (const path of [
+            '/applications',
+            '/applications/application-045',
+        ]) {
+            await page.goto(`${path}?lang=en`)
+            await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex, nofollow')
+        }
     })
 
     for (const { path, title, description } of [
@@ -33,11 +42,6 @@ test.describe('SEO and security', () => {
             path: '/',
             title: en.home.meta.title,
             description: en.home.meta.description,
-        },
-        {
-            path: '/about',
-            title: `${en.about.meta.title} · ${en.meta.siteName}`,
-            description: en.about.meta.description,
         },
     ]) {
         test(`${path} has title, description, canonical, hreflang, Open Graph and JSON-LD`, async ({
@@ -80,7 +84,7 @@ test.describe('SEO and security', () => {
     }
 
     test('pages carry a nonce CSP without unsafe-inline scripts and security headers', async ({ page }) => {
-        const response = await page.goto('/about')
+        const response = await page.goto('/applications')
         const headers = response?.headers() ?? {}
         const csp = headers['content-security-policy'] ?? ''
         const scriptSrc = csp.split('; ').find(part => part.startsWith('script-src ')) ?? ''
@@ -107,7 +111,7 @@ test.describe('SEO and security', () => {
         )
     })
 
-    test('health probes answer with the version', async ({ request }) => {
+    test('health probes report the API', async ({ request }) => {
         const live = await request.get('/health/live')
         expect(await live.json()).toEqual({
             status: 'ok',
@@ -118,10 +122,28 @@ test.describe('SEO and security', () => {
         const ready = await request.get('/health/ready')
         expect(ready.status()).toBe(200)
         expect(ready.headers()['x-app-version']).toBe('e2e')
-        expect(await ready.json()).toEqual({
+        expect(await ready.json()).toMatchObject({
             status: 'ok',
-            version: 'e2e',
+            checks: {
+                api: 'ok',
+            },
         })
+    })
+
+    test('the /api proxy forwards to the backend and keeps contract errors', async ({ request }) => {
+        const page = await request.get('/api/v1/applications?limit=2')
+        expect(page.status()).toBe(200)
+        expect((await page.json()).items).toHaveLength(2)
+
+        const missing = await request.get('/api/v1/applications/nope')
+        expect(missing.status()).toBe(404)
+        expect(await missing.json()).toMatchObject({
+            code: 'NOT_FOUND',
+        })
+        expect(missing.headers()['x-request-id']).toBeTruthy()
+
+        const outside = await request.get('/api/internal/anything')
+        expect(outside.status()).toBe(404)
     })
 })
 
@@ -142,7 +164,7 @@ test.describe('ROBOTS=noindex, set at runtime on the same build', () => {
 
     for (const path of [
         '/',
-        '/about',
+        '/applications',
     ]) {
         test(`${path} says noindex, nofollow`, async ({ page }) => {
             await page.goto(`${path}?lang=en`)

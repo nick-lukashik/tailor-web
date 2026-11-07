@@ -2,13 +2,13 @@ import { en, expect, ru, test } from './fixtures'
 
 test.describe('language', () => {
     test('?lang=ru renders Russian and rewrites the cookie', async ({ page, context }) => {
-        await page.goto('/about?lang=ru')
+        await page.goto('/applications?lang=ru')
         await expect(page.locator('html')).toHaveAttribute('lang', 'ru')
-        await expect(page).toHaveTitle(`${ru.about.meta.title} · ${ru.meta.siteName}`)
+        await expect(page).toHaveTitle(`${ru.applications.meta.title} · ${ru.meta.siteName}`)
         await expect(
             page.getByRole('heading', {
                 level: 1,
-                name: ru.about.heading,
+                name: ru.applications.heading,
             }),
         ).toBeVisible()
 
@@ -22,12 +22,12 @@ test.describe('language', () => {
         // And ?lang=en switches back.
         await page.goto('/?lang=en')
         await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-        await page.goto('/about')
+        await page.goto('/applications')
         await expect(page.locator('html')).toHaveAttribute('lang', 'en')
     })
 
     test('the language switch keeps the page and sets only the cookie', async ({ page, context }) => {
-        await page.goto('/about?lang=en')
+        await page.goto('/applications?lang=en')
         await page
             .getByRole('navigation', {
                 name: en.nav.language,
@@ -37,12 +37,12 @@ test.describe('language', () => {
             })
             .click()
         // Only the cookie changes: the address gets no ?lang=.
-        await expect(page).toHaveURL(/\/about$/)
+        await expect(page).toHaveURL(/\/applications$/)
         await expect(page.locator('html')).toHaveAttribute('lang', 'ru')
         await expect(
             page.getByRole('heading', {
                 level: 1,
-                name: ru.about.heading,
+                name: ru.applications.heading,
             }),
         ).toBeVisible()
         const cookies = await context.cookies()
@@ -56,7 +56,7 @@ test.describe('without JavaScript', () => {
     })
 
     test('the language switch falls back to ?lang=', async ({ page }) => {
-        await page.goto('/about?lang=en')
+        await page.goto('/applications?lang=en')
         await page
             .getByRole('navigation', {
                 name: en.nav.language,
@@ -65,7 +65,7 @@ test.describe('without JavaScript', () => {
                 name: ru.meta.languageName,
             })
             .click()
-        await expect(page).toHaveURL(/\/about\?lang=ru$/)
+        await expect(page).toHaveURL(/\/applications\?lang=ru$/)
         await expect(page.locator('html')).toHaveAttribute('lang', 'ru')
     })
 })

@@ -9,6 +9,7 @@ export async function register() {
     ])
     logger.info(
         {
+            apiUrl: serverEnv.API_URL,
             siteUrl: serverEnv.SITE_URL,
         },
         'server started',

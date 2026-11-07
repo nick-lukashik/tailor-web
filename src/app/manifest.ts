@@ -2,9 +2,9 @@ import { type MetadataRoute } from 'next'
 
 export default function manifest(): MetadataRoute.Manifest {
     return {
-        name: 'Next Starter',
-        short_name: 'Starter',
-        description: 'A production-ready Next.js skeleton with working examples.',
+        name: 'Tailor',
+        short_name: 'Tailor',
+        description: 'A CV and a cover letter for each vacancy.',
         start_url: '/',
         display: 'standalone',
         // The light palette in globals.css (--background).

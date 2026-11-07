@@ -1,8 +1,9 @@
 # syntax=docker/dockerfile:1
-#   docker build --build-arg APP_VERSION=$(git rev-parse HEAD) -t next-starter .
-#   docker run --rm -p 3000:3000 -e SITE_URL=http://localhost:3000 next-starter
+#   docker build --build-arg APP_VERSION=$(git rev-parse HEAD) -t tailor-web .
+#   docker run --rm -p 3000:3000 -e API_URL=http://host.docker.internal:4000 \
+#     -e SITE_URL=http://localhost:3000 tailor-web
 # APP_VERSION is the only build arg: one image runs on stage and prod, and
-# everything environment-specific (SITE_URL, ROBOTS) is runtime env.
+# everything environment-specific (API_URL, SITE_URL, ROBOTS) is runtime env.
 
 # base: the Node image every stage starts from. Renovate updates the tag.
 FROM node:26.13.0-trixie-slim AS base

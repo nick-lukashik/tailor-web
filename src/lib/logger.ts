@@ -8,7 +8,7 @@ import { REQUEST_ID_HEADER } from '@/lib/request-id'
 export const logger = pino({
     level: serverEnv.LOG_LEVEL,
     base: {
-        service: 'next-starter',
+        service: 'tailor-web',
         version: serverEnv.APP_VERSION,
     },
     timestamp: pino.stdTimeFunctions.isoTime,

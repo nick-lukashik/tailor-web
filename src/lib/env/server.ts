@@ -11,6 +11,12 @@ const unsetIfBlank = <T extends z.ZodType>(schema: T) => z.preprocess(blankAsMis
  */
 const schema = z
     .object({
+        /** Backend base URL; the browser never sees it (it calls /api on this origin). */
+        API_URL: unsetIfBlank(z.url().default('http://localhost:4000')),
+        /** Base of the public CV links (tailor-api's CV files): `${CV_URL}/<application id>` (tailor-api redirects to `<id>/<Name-Role-CV>.pdf`). In prod https://cv.<domain>. */
+        CV_URL: unsetIfBlank(z.url().default('http://localhost:4000/api/v1/cv')),
+        /** The /api proxy forwards only GET and HEAD: prod has no sign-in yet, so nobody writes through it. */
+        API_READ_ONLY: unsetIfBlank(z.stringbool().default(false)),
         /** Public origin of this site: canonical URLs, sitemap, Open Graph. */
         SITE_URL: unsetIfBlank(z.url().default('http://localhost:3000')),
         /** Build or release identifier, sent as x-app-version. */
@@ -28,6 +34,10 @@ const schema = z
                 ])
                 .default('info'),
         ),
+        /** Budget of every backend call: server-side requests and the /api proxy's upstream call. */
+        API_REQUEST_TIMEOUT_MS: unsetIfBlank(z.coerce.number().int().positive().default(10_000)),
+        /** Budget for reading a request body the /api proxy forwards. */
+        API_BODY_TIMEOUT_MS: unsetIfBlank(z.coerce.number().int().positive().default(10_000)),
         /** `noindex` (stage): robots.txt disallows everything, pages say noindex. */
         /** Google Tag Manager container (GTM-ABC1234). Set: the container on every visit, and a banner with "OK" that says so. Unset: neither, and the CSP stays on this origin. */
         GTM_ID: unsetIfBlank(
@@ -47,7 +57,9 @@ const schema = z
     })
     .transform(env => ({
         ...env,
+        API_URL: env.API_URL.replace(/\/+$/, ''),
         SITE_URL: env.SITE_URL.replace(/\/+$/, ''),
+        CV_URL: env.CV_URL.replace(/\/+$/, ''),
     }))
 
 const parsed = schema.safeParse(process.env)

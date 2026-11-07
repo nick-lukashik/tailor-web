@@ -13,8 +13,8 @@ const links = [
         label: 'home',
     },
     {
-        href: '/about',
-        label: 'about',
+        href: '/applications',
+        label: 'applications',
     },
 ] as const
 

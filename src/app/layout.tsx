@@ -12,6 +12,7 @@ import { serverEnv } from '@/lib/env/server'
 import { NONCE_HEADER } from '@/lib/security/csp'
 import { CANONICAL_HEADER, languageAlternates, localizedPath, PATHNAME_HEADER } from '@/lib/seo/alternates'
 import { baseOpenGraph } from '@/lib/seo/metadata'
+import { Providers } from './providers'
 import './globals.css'
 
 /**
@@ -106,14 +107,22 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
                     {t('nav.skip')}
                 </a>
                 <NextIntlClientProvider>
-                    <SiteHeader languageNames={names} />
-                    <main
-                        id="main"
-                        className="mx-auto w-full max-w-5xl flex-1 px-4 py-10"
+                    <Providers
+                        nonce={nonce}
+                        toastLabels={{
+                            region: t('toast.region'),
+                            close: t('toast.close'),
+                        }}
                     >
-                        {children}
-                    </main>
-                    <SiteFooter />
+                        <SiteHeader languageNames={names} />
+                        <main
+                            id="main"
+                            className="mx-auto w-full max-w-5xl flex-1 px-4 py-10"
+                        >
+                            {children}
+                        </main>
+                        <SiteFooter />
+                    </Providers>
                     {serverEnv.GTM_ID ? (
                         <AnalyticsConsent
                             id={serverEnv.GTM_ID}

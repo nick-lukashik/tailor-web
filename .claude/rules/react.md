@@ -50,8 +50,8 @@ tree to agents through Chrome DevTools MCP. It is not set up here.
 
 ## React 19 APIs to prefer
 
-- `use(promise)` and `use(context)`. Forms that write to a backend use TanStack `useMutation` (next-example,
-  `src/app/notes/_components/`); `<form action={fn}>` with `useActionState`, `useOptimistic` and
+- `use(promise)` and `use(context)`. Forms that write to the backend use TanStack `useMutation` (see
+  next-example's `src/app/notes/_components/`); `<form action={fn}>` with `useActionState`, `useOptimistic` and
   `useFormStatus` fits Server Actions that only touch this server (for example setting a cookie).
 - `ref` is a normal prop on function components, so don't use `forwardRef` in new code. `<MyContext value={v}>`
   works as a provider, no `.Provider` needed.
