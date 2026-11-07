@@ -15,7 +15,7 @@ component's docs and examples, and `pnpm exec shadcn mcp init` sets up the shadc
 - Primitives come from the `radix-ui` package (`import { Slot } from 'radix-ui'`). Icons from `lucide-react`.
 - The CLI is a pinned devDependency: run `pnpm exec shadcn ...`, not `pnpm dlx shadcn@latest` (Renovate
   updates the pin). `shadcn/tailwind.css` and `tw-animate-css` are imported by `src/app/globals.css`.
-- Installed: button, card. next-example also has input, textarea, label, field, separator, skeleton, sonner.
+- Installed: button, input, textarea, label, field, separator, card, skeleton, sonner.
 
 ## Adding or updating a component
 
@@ -29,12 +29,13 @@ component's docs and examples, and `pnpm exec shadcn mcp init` sets up the shadc
 
 ## Using components
 
-- Links styled as buttons: `<Button asChild><Link href="/">...</Link></Button>`.
+- Links styled as buttons: `<Button asChild><Link href="/applications">...</Link></Button>`.
 - Forms: `Field`, `FieldLabel htmlFor`, `FieldDescription id`, `FieldError id` (`role="alert"`), and set
-  `data-invalid` on `Field`, `aria-invalid` and `aria-describedby` on the control (next-example,
-  `src/app/notes/_components/create-note-form.tsx`). There is no react-hook-form.
-- Toasts: Sonner, added with the API (next-example): `<Toaster>` in `src/app/providers.tsx`, its stylesheet hash
-  in the CSP.
+  `data-invalid` on `Field`, `aria-invalid` and `aria-describedby` on the control (see
+  next-example's `create-note-form.tsx`). There is no react-hook-form here; validation errors come
+  from the API.
+- Toasts: `toast.success(...)` / `toast.error(...)` from `sonner`; `<Toaster>` is mounted once in
+  `src/app/providers.tsx` with translated labels.
 - Colours: only the tokens in `globals.css` (`bg-background`, `text-muted-foreground`, `text-destructive`,
   `border-input`, ...). A component that needs a new token: add it there, light value only, AA contrast.
 - Every visible or accessible string comes from next-intl, including labels shadcn hardcodes (for example

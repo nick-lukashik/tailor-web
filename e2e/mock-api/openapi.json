@@ -1,0 +1,391 @@
+{
+    "openapi": "3.0.0",
+    "paths": {
+        "/api/v1/applications": {
+            "get": {
+                "operationId": "ApplicationsController_list_v1",
+                "parameters": [
+                    {
+                        "name": "x-request-id",
+                        "in": "header",
+                        "description": "Echoed back; generated when absent",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "required": false,
+                        "in": "query",
+                        "schema": {
+                            "default": 20,
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100
+                        }
+                    },
+                    {
+                        "name": "cursor",
+                        "required": false,
+                        "in": "query",
+                        "schema": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 256
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApplicationList"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Validation failed (VALIDATION_FAILED)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal error (INTERNAL)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Database over its time budget or unavailable, retry later (UNAVAILABLE)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "504": {
+                        "description": "Request over its 10 s budget (TIMEOUT)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "summary": "Newest applications first, cursor pagination",
+                "tags": ["applications"]
+            },
+            "post": {
+                "operationId": "ApplicationsController_create_v1",
+                "parameters": [
+                    {
+                        "name": "x-request-id",
+                        "in": "header",
+                        "description": "Echoed back; generated when absent",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateApplication"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Application"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Validation failed (VALIDATION_FAILED)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "413": {
+                        "description": "Request body over 1 MiB (PAYLOAD_TOO_LARGE)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal error (INTERNAL)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Database over its time budget or unavailable, retry later (UNAVAILABLE)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "504": {
+                        "description": "Request over its 10 s budget (TIMEOUT)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "tags": ["applications"]
+            }
+        },
+        "/api/v1/applications/{id}": {
+            "get": {
+                "operationId": "ApplicationsController_get_v1",
+                "parameters": [
+                    {
+                        "name": "x-request-id",
+                        "in": "header",
+                        "description": "Echoed back; generated when absent",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "id",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Application"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found (NOT_FOUND)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal error (INTERNAL)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Database over its time budget or unavailable, retry later (UNAVAILABLE)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "504": {
+                        "description": "Request over its 10 s budget (TIMEOUT)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "tags": ["applications"]
+            }
+        }
+    },
+    "info": {
+        "title": "tailor-api",
+        "description": "",
+        "version": "0.1.0",
+        "contact": {}
+    },
+    "tags": [],
+    "servers": [],
+    "components": {
+        "schemas": {
+            "ApplicationList": {
+                "type": "object",
+                "properties": {
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/Application"
+                        }
+                    },
+                    "nextCursor": {
+                        "nullable": true,
+                        "type": "string"
+                    }
+                },
+                "required": ["items", "nextCursor"],
+                "additionalProperties": false
+            },
+            "Application": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "company": {
+                        "type": "string"
+                    },
+                    "role": {
+                        "type": "string"
+                    },
+                    "vacancyUrl": {
+                        "nullable": true,
+                        "type": "string"
+                    },
+                    "vacancyText": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": ["new", "sent", "interview", "offer", "rejected"]
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                    }
+                },
+                "required": ["id", "company", "role", "vacancyUrl", "vacancyText", "status", "createdAt"],
+                "additionalProperties": false
+            },
+            "Error": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string",
+                        "enum": [
+                            "VALIDATION_FAILED",
+                            "NOT_FOUND",
+                            "PAYLOAD_TOO_LARGE",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "UNAVAILABLE",
+                            "TIMEOUT"
+                        ]
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "details": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "path": {
+                                    "type": "string"
+                                },
+                                "message": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": ["path", "message"],
+                            "additionalProperties": false
+                        }
+                    },
+                    "requestId": {
+                        "type": "string"
+                    }
+                },
+                "required": ["code", "message", "requestId"],
+                "additionalProperties": false
+            },
+            "CreateApplication": {
+                "type": "object",
+                "properties": {
+                    "company": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                    },
+                    "role": {
+                        "default": "",
+                        "type": "string",
+                        "maxLength": 200
+                    },
+                    "vacancyUrl": {
+                        "type": "string",
+                        "maxLength": 2048,
+                        "format": "uri"
+                    },
+                    "vacancyText": {
+                        "default": "",
+                        "type": "string",
+                        "maxLength": 50000
+                    }
+                },
+                "required": ["company"],
+                "additionalProperties": false
+            }
+        }
+    }
+}

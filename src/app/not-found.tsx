@@ -24,6 +24,12 @@ export default async function NotFound() {
                 <Button asChild>
                     <Link href="/">{t('home')}</Link>
                 </Button>
+                <Button
+                    asChild
+                    variant="outline"
+                >
+                    <Link href="/applications">{t('applications')}</Link>
+                </Button>
             </div>
         </section>
     )

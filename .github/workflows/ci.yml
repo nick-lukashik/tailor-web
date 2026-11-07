@@ -19,7 +19,7 @@ jobs:
             packages: write
         with:
             kind: web
-            # The template itself only checks; a repo created from it publishes its image.
+            # Not a template: publishes on master (the same line as in next-starter).
             publish: ${{ !github.event.repository.is_template }}
 
     # Pushed image on master (verify and e2e green): a PR in gitops with the new digest.

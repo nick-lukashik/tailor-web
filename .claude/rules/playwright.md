@@ -20,17 +20,23 @@ Official agent tooling. Optional, and the owner decides. Re-run both commands af
 
 ## Project setup
 
-- Tests live in `e2e/` and run against the production build (standalone server), started by `webServer` in
-  `playwright.config.ts` (once with `ROBOTS=index`, once with `noindex`). Don't switch e2e to `next dev`.
-- A site that adds the API also adds the mock API server and its fixtures (next-example): `page.route()` intercepts
-  only browser requests, server-side calls reach the mock.
+- Tests live in `e2e/` and run against the production build (standalone server). `webServer` in
+  `playwright.config.ts` starts it together with the mock API that `API_URL` points to. Don't switch e2e to
+  `next dev`.
+- `page.route()` intercepts only browser requests. Server-side calls (RSC prefetch, and the `/api/*` handler
+  calling the backend) reach the mock API server, so change server-side data there.
 - Use `baseURL` with relative paths: `page.goto('/')`.
 - Never set `bypassCSP: true`. E2E must exercise the real nonce CSP. Failing on unexpected `console` errors
   catches CSP violations.
 - For i18n, cover `?lang=` and the locale cookie (`context.addCookies`). `test.use({ locale: 'ru-RU' })` sets
   `Accept-Language`, which decides nothing: use it to check that such a first visit is still in English. Take
-  UI strings from the messages JSON (`e2e/fixtures.ts` exports `en` and `ru`), not hardcoded copies.
-- Import `test`/`expect` from `./fixtures`: it fails the test on any CSP violation in the console.
+  UI strings from the messages JSON (`e2e/fixtures.ts` exports `en` and `ru`), not hardcoded copies; data from
+  the mock API (seed titles) may be literal.
+- Start every test from the mock's seed (the `page` fixture in `e2e/fixtures.ts` resets it) and import
+  `test`/`expect` from `./fixtures`: it also fails the test on any CSP violation in the console.
+- `e2e/applications.spec.ts` also runs in project `real-api` against a real API (`E2E_API_URL`), where nothing is reset.
+  There, take expectations from the `backend` fixture (create applications, read them back), not from seed titles, ids or
+  counts; skip a test that needs a mock-only hook (`test.skip(backend.kind === 'real', '<why>')`).
 
 ## Writing tests
 

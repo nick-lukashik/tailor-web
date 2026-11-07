@@ -73,7 +73,7 @@ export default function OpengraphImage() {
                         lineHeight: 1.05,
                     }}
                 >
-                    {en.meta.ogTitle}
+                    A CV and a cover letter for each vacancy
                 </div>
                 <div
                     style={{
@@ -81,7 +81,7 @@ export default function OpengraphImage() {
                         color: '#737373',
                     }}
                 >
-                    {en.meta.ogTagline}
+                    Two-page CV · cover letter · one board for every application
                 </div>
             </div>
         </div>,

@@ -1,0 +1,145 @@
+'use client'
+
+import { useInfiniteQuery } from '@tanstack/react-query'
+import { Loader2Icon } from 'lucide-react'
+import Link from 'next/link'
+import { useTranslations } from 'next-intl'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import { applicationQueries } from '@/lib/api/applications'
+import { browserApi } from '@/lib/api/browser'
+import { type Application } from '@/lib/api/types'
+import { ApplicationDate } from './application-date'
+import { StatusBadge } from './status-badge'
+
+function ApplicationItem({ application }: { application: Application }) {
+    return (
+        <li>
+            <Card size="sm">
+                <CardContent className="grid gap-1">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                        <h3 className="font-semibold break-words">
+                            <Link
+                                href={`/applications/${encodeURIComponent(application.id)}`}
+                                className="underline-offset-4 hover:underline"
+                            >
+                                {application.company}
+                            </Link>
+                        </h3>
+                        <StatusBadge status={application.status} />
+                    </div>
+                    {application.role && <p className="text-muted-foreground">{application.role}</p>}
+                    <p className="text-xs text-muted-foreground">
+                        <ApplicationDate value={application.createdAt} />
+                    </p>
+                </CardContent>
+            </Card>
+        </li>
+    )
+}
+
+/** Cursor pagination with useInfiniteQuery; page 1 arrives hydrated from the server. */
+export function ApplicationsList() {
+    const t = useTranslations('applications.list')
+    const applications = useInfiniteQuery(applicationQueries.list(browserApi))
+    const items = applications.data?.pages.flatMap(page => page.items) ?? []
+
+    return (
+        <section
+            aria-labelledby="applications-list-title"
+            className="grid max-w-3xl content-start gap-4"
+        >
+            <h2
+                id="applications-list-title"
+                className="text-xl font-semibold"
+            >
+                {t('title')}
+            </h2>
+
+            {applications.isPending && (
+                <div className="grid gap-3">
+                    <p
+                        role="status"
+                        className="sr-only"
+                    >
+                        {t('loading')}
+                    </p>
+                    {Array.from(
+                        {
+                            length: 4,
+                        },
+                        (_, index) => (
+                            <Skeleton
+                                // biome-ignore lint/suspicious/noArrayIndexKey: static placeholders, never reordered.
+                                key={index}
+                                className="h-20"
+                            />
+                        ),
+                    )}
+                </div>
+            )}
+
+            {applications.isError && !applications.data && (
+                <div
+                    role="alert"
+                    className="grid justify-items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/5 p-4"
+                >
+                    <p>{t('error')}</p>
+                    <Button
+                        variant="outline"
+                        onClick={() => applications.refetch()}
+                    >
+                        {t('retry')}
+                    </Button>
+                </div>
+            )}
+
+            {applications.isSuccess && items.length === 0 && <p className="text-muted-foreground">{t('empty')}</p>}
+
+            {items.length > 0 && (
+                <ul
+                    className="grid gap-3"
+                    aria-label={t('title')}
+                >
+                    {items.map(application => (
+                        <ApplicationItem
+                            key={application.id}
+                            application={application}
+                        />
+                    ))}
+                </ul>
+            )}
+
+            {applications.hasNextPage ? (
+                <div>
+                    {/* Stays focusable while loading (aria-disabled, not disabled). */}
+                    <Button
+                        variant="outline"
+                        aria-busy={applications.isFetchingNextPage || undefined}
+                        aria-disabled={applications.isFetchingNextPage || undefined}
+                        onClick={() => {
+                            if (!applications.isFetchingNextPage) applications.fetchNextPage()
+                        }}
+                    >
+                        {applications.isFetchingNextPage && (
+                            <Loader2Icon className="animate-spin motion-reduce:animate-none" />
+                        )}
+                        {applications.isFetchingNextPage ? t('loadingMore') : t('loadMore')}
+                    </Button>
+                </div>
+            ) : (
+                applications.isSuccess
+                && items.length > 0 && <p className="text-sm text-muted-foreground">{t('end')}</p>
+            )}
+            {applications.isFetchNextPageError && (
+                <p
+                    role="alert"
+                    className="text-sm text-destructive"
+                >
+                    {t('error')}
+                </p>
+            )}
+        </section>
+    )
+}

@@ -1,0 +1,307 @@
+// In-memory implementation of the tailor-api contract (./openapi.json), for
+// e2e tests and for working on the frontend without a backend:
+//   pnpm mock:api                 # http://localhost:4000
+//   PORT=4010 pnpm mock:api
+// Test hooks: a company starting with "!fail" answers 500, "!slow" never
+// answers (until the caller gives up); POST /__mock/reset restores the seed
+// and clears the request log; GET /__mock/requests lists the /api requests
+// that arrived since (method, path, headers, body size, aborted). Runs on
+// Node's built-in TypeScript support.
+import { randomUUID } from 'node:crypto'
+import { readFileSync } from 'node:fs'
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
+
+const statuses = [
+    'new',
+    'sent',
+    'interview',
+    'offer',
+    'rejected',
+] as const
+type Application = {
+    id: string
+    company: string
+    role: string
+    vacancyUrl: string | null
+    vacancyText: string
+    status: (typeof statuses)[number]
+    createdAt: string
+}
+type Issue = {
+    path: string
+    message: string
+}
+/** One /api request as it arrived, for tests of what the web's proxy forwards. */
+type Received = {
+    method: string
+    path: string
+    headers: IncomingMessage['headers']
+    bodyBytes?: number
+    aborted: boolean
+}
+
+const port = Number(process.env.PORT ?? 4000)
+const createDelayMs = Number(process.env.MOCK_DELAY_MS ?? 400)
+const openapi = readFileSync(new URL('./openapi.json', import.meta.url), 'utf8')
+
+let applications: Application[] = []
+let received: Received[] = []
+
+function seed() {
+    received = []
+    const start = Date.parse('2026-10-01T09:00:00.000Z')
+    applications = Array.from(
+        {
+            length: 45,
+        },
+        (_, index) => {
+            const n = 45 - index
+            return {
+                id: `application-${String(n).padStart(3, '0')}`,
+                company: `Seed company ${n}`,
+                role: n % 4 === 0 ? '' : `Seed role ${n}`,
+                vacancyUrl: n % 2 === 0 ? `https://example.com/jobs/${n}` : null,
+                vacancyText: n % 3 === 0 ? '' : `Vacancy text of seed application ${n}. Written by the mock API.`,
+                status: statuses[n % statuses.length] ?? 'new',
+                createdAt: new Date(start + n * 3_600_000).toISOString(),
+            }
+        },
+    )
+}
+
+const encodeCursor = (id: string) =>
+    Buffer.from(
+        JSON.stringify({
+            after: id,
+        }),
+    ).toString('base64url')
+function decodeCursor(cursor: string): string | undefined {
+    try {
+        const value = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8'))
+        return typeof value?.after === 'string' ? value.after : undefined
+    } catch {
+        return undefined
+    }
+}
+
+function send(res: ServerResponse, status: number, body: unknown, requestId: string) {
+    res.writeHead(status, {
+        'content-type': 'application/json',
+        'x-request-id': requestId,
+    })
+    res.end(body === undefined ? '' : JSON.stringify(body))
+}
+
+function fail(
+    res: ServerResponse,
+    status: number,
+    code: string,
+    message: string,
+    requestId: string,
+    details?: Issue[],
+) {
+    send(
+        res,
+        status,
+        {
+            code,
+            message,
+            ...(details
+                ? {
+                      details,
+                  }
+                : {}),
+            requestId,
+        },
+        requestId,
+    )
+}
+
+async function readJson(req: IncomingMessage, record?: Received): Promise<unknown> {
+    const chunks: Buffer[] = []
+    for await (const chunk of req) chunks.push(chunk as Buffer)
+    const raw = Buffer.concat(chunks)
+    if (record) record.bodyBytes = raw.byteLength
+    const text = raw.toString('utf8')
+    return text ? JSON.parse(text) : undefined
+}
+
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+
+async function handle(req: IncomingMessage, res: ServerResponse) {
+    const url = new URL(req.url ?? '/', 'http://mock')
+    const incoming = req.headers['x-request-id']
+    const requestId = typeof incoming === 'string' && incoming ? incoming : randomUUID()
+    const method = req.method ?? 'GET'
+    const path = url.pathname
+
+    if (method === 'GET' && (path === '/health/ready' || path === '/health/live')) {
+        return send(
+            res,
+            200,
+            {
+                status: 'ok',
+            },
+            requestId,
+        )
+    }
+    if (method === 'GET' && path === '/openapi.json') {
+        res.writeHead(200, {
+            'content-type': 'application/json',
+        })
+        return res.end(openapi)
+    }
+    if (method === 'POST' && path === '/__mock/reset') {
+        seed()
+        return send(res, 204, undefined, requestId)
+    }
+    if (method === 'GET' && path === '/__mock/requests') {
+        return send(res, 200, received, requestId)
+    }
+
+    const record: Received = {
+        method,
+        path,
+        headers: req.headers,
+        aborted: false,
+    }
+    received.push(record)
+    if (received.length > 100) received.shift()
+    res.on('close', () => {
+        if (!res.writableFinished) record.aborted = true
+    })
+
+    if (method === 'GET' && path === '/api/v1/applications') {
+        const limit = Number(url.searchParams.get('limit') ?? 20)
+        if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+            return fail(res, 400, 'VALIDATION_FAILED', 'Invalid query', requestId, [
+                {
+                    path: 'limit',
+                    message: 'limit must be an integer from 1 to 100',
+                },
+            ])
+        }
+        const cursor = url.searchParams.get('cursor')
+        let start = 0
+        if (cursor) {
+            const after = decodeCursor(cursor)
+            const index = applications.findIndex(application => application.id === after)
+            if (index < 0) {
+                return fail(res, 400, 'VALIDATION_FAILED', 'Invalid cursor', requestId, [
+                    {
+                        path: 'cursor',
+                        message: 'cursor is not valid',
+                    },
+                ])
+            }
+            start = index + 1
+        }
+        const items = applications.slice(start, start + limit)
+        const last = items.at(-1)
+        const nextCursor = last && start + limit < applications.length ? encodeCursor(last.id) : null
+        return send(
+            res,
+            200,
+            {
+                items,
+                nextCursor,
+            },
+            requestId,
+        )
+    }
+
+    const detail = path.match(/^\/api\/v1\/applications\/([^/]+)$/)
+    if (method === 'GET' && detail) {
+        const id = decodeURIComponent(detail[1] ?? '')
+        const application = applications.find(item => item.id === id)
+        if (!application) return fail(res, 404, 'NOT_FOUND', `Application ${id} not found`, requestId)
+        return send(res, 200, application, requestId)
+    }
+
+    if (method === 'POST' && path === '/api/v1/applications') {
+        let input: unknown
+        try {
+            input = await readJson(req, record)
+        } catch {
+            return fail(res, 400, 'VALIDATION_FAILED', 'Body is not JSON', requestId, [])
+        }
+        const {
+            company,
+            role = '',
+            vacancyUrl,
+            vacancyText = '',
+        } = (input ?? {}) as {
+            company?: unknown
+            role?: unknown
+            vacancyUrl?: unknown
+            vacancyText?: unknown
+        }
+        const issues: Issue[] = []
+        if (typeof company !== 'string' || company.trim().length < 1 || company.length > 200) {
+            issues.push({
+                path: 'company',
+                message: 'company must be 1 to 200 characters',
+            })
+        }
+        if (typeof role !== 'string' || role.length > 200) {
+            issues.push({
+                path: 'role',
+                message: 'role must be at most 200 characters',
+            })
+        }
+        if (vacancyUrl !== undefined && (typeof vacancyUrl !== 'string' || !/^https?:\/\//.test(vacancyUrl))) {
+            issues.push({
+                path: 'vacancyUrl',
+                message: 'vacancyUrl must be an http(s) URL',
+            })
+        }
+        if (typeof vacancyText !== 'string' || vacancyText.length > 50_000) {
+            issues.push({
+                path: 'vacancyText',
+                message: 'vacancyText must be at most 50000 characters',
+            })
+        }
+        if (typeof company === 'string' && company.startsWith('!slow')) {
+            // Holds the request until the caller gives up (at most a minute).
+            await Promise.race([
+                new Promise(resolve => res.once('close', resolve)),
+                sleep(60_000),
+            ])
+            if (!res.destroyed) fail(res, 500, 'INTERNAL', 'Mock gave up waiting', requestId)
+            return
+        }
+        await sleep(createDelayMs)
+        if (issues.length > 0) {
+            return fail(res, 400, 'VALIDATION_FAILED', 'Validation failed', requestId, issues)
+        }
+        if ((company as string).startsWith('!fail')) {
+            return fail(res, 500, 'INTERNAL', 'Mock failure', requestId)
+        }
+        const application: Application = {
+            id: randomUUID(),
+            company: (company as string).trim(),
+            role: (role as string).trim(),
+            vacancyUrl: (vacancyUrl as string | undefined) ?? null,
+            vacancyText: vacancyText as string,
+            status: 'new',
+            createdAt: new Date().toISOString(),
+        }
+        applications = [
+            application,
+            ...applications,
+        ]
+        return send(res, 201, application, requestId)
+    }
+
+    return fail(res, 404, 'NOT_FOUND', `No route ${method} ${path}`, requestId)
+}
+
+seed()
+createServer((req, res) => {
+    handle(req, res).catch((error: unknown) => {
+        console.error(error)
+        if (!res.headersSent) fail(res, 500, 'INTERNAL', 'Mock crashed', randomUUID())
+    })
+}).listen(port, () => {
+    console.log(`mock API on http://localhost:${port}`)
+})

@@ -1,18 +1,16 @@
 {
     "meta": {
-        "siteName": "Next Starter",
+        "siteName": "Tailor",
         "languageName": "English",
-        "description": "A Next.js starter for a site on this platform: SEO, strict CSP, English and Russian, tests, Docker and CI.",
-        "ogAlt": "Next Starter — a Next.js starter",
-        "ogTitle": "A Next.js starter for this platform",
-        "ogTagline": "SEO · strict CSP · EN/RU · tests"
+        "description": "Tailor turns a vacancy into a CV and a cover letter made for it, and keeps track of every application.",
+        "ogAlt": "Tailor: a CV and a cover letter for each vacancy"
     },
     "nav": {
         "skip": "Skip to content",
         "label": "Main",
         "home": "Home",
-        "language": "Language",
-        "about": "About"
+        "applications": "Applications",
+        "language": "Language"
     },
     "footer": {
         "version": "Version {version}",
@@ -20,25 +18,51 @@
     },
     "home": {
         "meta": {
-            "title": "Next Starter — a Next.js starter",
-            "description": "Start a site from a working base: titles and metadata, sitemap, strict security headers, two languages and tests."
+            "title": "Tailor: a CV and a cover letter for each vacancy",
+            "description": "Paste a vacancy and get a two-page CV and a cover letter written for it. Every application stays on one board until the answer."
         },
-        "heading": "A Next.js starter that already works",
-        "lead": "Every piece below is wired up and covered by tests. Replace these pages with your own; take data fetching through the API from next-example when you need it.",
+        "heading": "A CV and a cover letter for each vacancy",
+        "lead": "Paste a link and the text of a vacancy. Tailor picks what matters for it and builds a two-page CV and a cover letter. Every application stays on one board until the answer.",
         "features": {
-            "seo": "Titles and descriptions in both languages, canonical and hreflang links, Open Graph card, robots.txt, sitemap.xml, JSON-LD.",
-            "security": "Strict Content Security Policy with a nonce per request and security headers.",
-            "i18n": "English and Russian without URL prefixes: a cookie remembers the choice, ?lang= switches it.",
-            "quality": "Biome, Vitest, Playwright with axe checks, Pino logs, health probes, Docker and CI."
-        }
-    },
-    "about": {
-        "meta": {
-            "title": "About",
-            "description": "A sample page: its own title and description, the rest of the metadata from the layout."
+            "input": "A link and the vacancy text are enough to start.",
+            "cv": "A two-page CV with the experience that fits this vacancy.",
+            "letter": "A cover letter and short messages in the same voice.",
+            "board": "One board for every application, from sent to the answer."
         },
-        "heading": "About",
-        "body": "A sample second page. Its title and description come from this page; the canonical URL, language alternates and the Open Graph card come from the layout."
+        "cta": "Open applications"
+    },
+    "applications": {
+        "meta": {
+            "title": "Applications",
+            "description": "Applications and what was sent to each vacancy."
+        },
+        "heading": "Applications",
+        "lead": "Every vacancy and what was sent to it, newest first.",
+        "list": {
+            "title": "Latest applications",
+            "loading": "Loading applications…",
+            "empty": "No applications yet.",
+            "loadMore": "Load more",
+            "loadingMore": "Loading…",
+            "end": "That's all the applications.",
+            "error": "Could not load the applications.",
+            "retry": "Try again"
+        },
+        "status": {
+            "new": "New",
+            "sent": "Sent",
+            "interview": "Interview",
+            "offer": "Offer",
+            "rejected": "Rejected"
+        },
+        "detail": {
+            "back": "All applications",
+            "createdAt": "Added <time>{date}</time>",
+            "demoCv": "Demo CV",
+            "vacancyLink": "Vacancy",
+            "vacancyText": "Vacancy text",
+            "emptyVacancyText": "No vacancy text."
+        }
     },
     "error": {
         "title": "Something went wrong",
@@ -50,7 +74,12 @@
     "notFound": {
         "title": "Page not found",
         "body": "There is no page at this address. It may have moved or never existed.",
-        "home": "Go to the home page"
+        "home": "Go to the home page",
+        "applications": "Open applications"
+    },
+    "toast": {
+        "region": "Notifications",
+        "close": "Close"
     },
     "consent": {
         "label": "Statistics cookies",
