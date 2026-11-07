@@ -11,9 +11,10 @@ import { StatusBadge } from './status-badge'
 
 /**
  * The application from the hydrated cache; refetches in the background when
- * stale. `demoCvUrl` is the mock CV on cv.<domain> until the pipeline makes real ones.
+ * stale. `cvUrl` is the CV link of this application on cv.<domain> (a demo PDF
+ * until the pipeline makes real ones).
  */
-export function ApplicationView({ id, demoCvUrl }: { id: string; demoCvUrl: string }) {
+export function ApplicationView({ id, cvUrl }: { id: string; cvUrl: string }) {
     const t = useTranslations('applications.detail')
     const formatDate = useApplicationDate()
     const { data: application } = useQuery(applicationQueries.detail(browserApi, id))
@@ -42,11 +43,11 @@ export function ApplicationView({ id, demoCvUrl }: { id: string; demoCvUrl: stri
             <div className="flex flex-wrap gap-3">
                 <Button asChild>
                     <a
-                        href={demoCvUrl}
+                        href={cvUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                     >
-                        {t('demoCv')}
+                        {t('cv')}
                     </a>
                 </Button>
                 {application.vacancyUrl && (

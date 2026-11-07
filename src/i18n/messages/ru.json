@@ -58,7 +58,7 @@
         "detail": {
             "back": "Все отклики",
             "createdAt": "Добавлен <time>{date}</time>",
-            "demoCv": "Демо-CV",
+            "cv": "CV (PDF)",
             "vacancyLink": "Вакансия",
             "vacancyText": "Текст вакансии",
             "emptyVacancyText": "Текста вакансии нет."

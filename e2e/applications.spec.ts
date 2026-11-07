@@ -41,7 +41,7 @@ test.describe('applications', () => {
         await expect(loadMore).toHaveCount(0)
     })
 
-    test('the application page shows the vacancy, its status and the demo CV', async ({ page, backend }) => {
+    test('the application page shows the vacancy, its status and its CV link', async ({ page, backend }) => {
         const application = await backend.create({
             company: uniqueTitle('Company'),
             role: 'Engineer',
@@ -66,9 +66,9 @@ test.describe('applications', () => {
         await expect(vacancy).toHaveAttribute('rel', 'noopener noreferrer')
         await expect(
             page.getByRole('link', {
-                name: detail.demoCv,
+                name: detail.cv,
             }),
-        ).toHaveAttribute('href', /\/demo$/)
+        ).toHaveAttribute('href', new RegExp(`/${application.id}$`))
 
         await page
             .getByRole('link', {

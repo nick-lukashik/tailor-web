@@ -58,7 +58,7 @@
         "detail": {
             "back": "All applications",
             "createdAt": "Added <time>{date}</time>",
-            "demoCv": "Demo CV",
+            "cv": "CV (PDF)",
             "vacancyLink": "Vacancy",
             "vacancyText": "Vacancy text",
             "emptyVacancyText": "No vacancy text."

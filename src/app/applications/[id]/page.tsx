@@ -7,9 +7,6 @@ import { getServerQueryClient } from '@/lib/query/server'
 import { ApplicationView } from '../_components/application-view'
 import { loadApplication } from '../load-application'
 
-/** The mock CV of tailor-api; the real file of each application comes with the pipeline. */
-const DEMO_CV_CODE = 'demo'
-
 export async function generateMetadata({ params }: PageProps<'/applications/[id]'>): Promise<Metadata> {
     const { id } = await params
     const [application, t] = await Promise.all([
@@ -37,7 +34,8 @@ export default async function ApplicationPage({ params }: PageProps<'/applicatio
         <HydrationBoundary state={dehydrate(queryClient)}>
             <ApplicationView
                 id={id}
-                demoCvUrl={`${serverEnv.CV_URL}/${DEMO_CV_CODE}`}
+                // tailor-api redirects the id to <id>/<Name-Role-CV>.pdf.
+                cvUrl={`${serverEnv.CV_URL}/${encodeURIComponent(id)}`}
             />
         </HydrationBoundary>
     )

@@ -13,7 +13,7 @@ const schema = z
     .object({
         /** Backend base URL; the browser never sees it (it calls /api on this origin). */
         API_URL: unsetIfBlank(z.url().default('http://localhost:4000')),
-        /** Base of the public CV links (tailor-api's CV files): `${CV_URL}/<code>`. In prod https://cv.<domain>. */
+        /** Base of the public CV links (tailor-api's CV files): `${CV_URL}/<application id>` (tailor-api redirects to `<id>/<Name-Role-CV>.pdf`). In prod https://cv.<domain>. */
         CV_URL: unsetIfBlank(z.url().default('http://localhost:4000/api/v1/cv')),
         /** The /api proxy forwards only GET and HEAD: prod has no sign-in yet, so nobody writes through it. */
         API_READ_ONLY: unsetIfBlank(z.stringbool().default(false)),

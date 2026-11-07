@@ -53,7 +53,7 @@ To use the real backend, run `tailor-api` (its README, "Getting started") on `:4
 | QueryClient: browser singleton, one per request on the server, devtools in dev only | `src/lib/query/`, `src/app/providers.tsx` |
 | API client, errors, keys and query options | `src/lib/api/` (`client.ts`, `errors.ts`, `applications.ts`, `types.ts`) |
 | Applications: server prefetch + `HydrationBoundary`, infinite list | `src/app/applications/(list)/page.tsx`, `src/app/applications/_components/applications-list.tsx` |
-| Application page: `generateMetadata`, `notFound()`, the demo CV link (`CV_URL`) | `src/app/applications/[id]/page.tsx`, `src/app/applications/load-application.ts` |
+| Application page: `generateMetadata`, `notFound()`, the CV link of the application (`CV_URL`) | `src/app/applications/[id]/page.tsx`, `src/app/applications/load-application.ts` |
 | Applications are never indexed (noindex, not in the sitemap) | `src/app/applications/layout.tsx`, `src/app/sitemap.ts` |
 | Optimistic create, per-field errors (when forms arrive) | next-example's `src/app/notes/_components/` |
 | `/api/*` → `API_URL` proxy, read-only with `API_READ_ONLY` | `src/app/api/[...path]/route.ts` |
@@ -156,7 +156,7 @@ The specs create the applications they need through the API and read expected va
 | `API_REQUEST_TIMEOUT_MS` | `10000` | at startup; every API call (server-side and the `/api` proxy) |
 | `API_BODY_TIMEOUT_MS` | `10000` | at startup; reading a body the `/api` proxy forwards |
 | `API_READ_ONLY` | `false` | at startup; `true`: the `/api` proxy forwards only `GET` and `HEAD` (prod until sign-in) |
-| `CV_URL` | `http://localhost:4000/api/v1/cv` | at startup; base of the public CV links, `${CV_URL}/<code>` (prod: `https://cv.<domain>`) |
+| `CV_URL` | `http://localhost:4000/api/v1/cv` | at startup; base of the public CV links, `${CV_URL}/<application id>` (tailor-api redirects to `<id>/<Name-Role-CV>.pdf`) (prod: `https://cv.<domain>`) |
 | `SITE_URL` | `http://localhost:3000` | at startup |
 | `APP_VERSION` | `dev` | at startup (`x-app-version` header) |
 | `LOG_LEVEL` | `info` | at startup |
@@ -194,7 +194,7 @@ Versions are pinned exactly. [Renovate](https://docs.renovatebot.com/) (`renovat
 The image follows the [service runtime contract](https://github.com/nick-lukashik/.github/blob/master/docs/service-contract.md) (kind **web**).
 
 - gitops `apps/tailor-web/prod`: `components/service`, `components/web`, `components/subdomain` (`tailor`), the image by digest.
-- ConfigMap `tailor-web-config`: `API_URL=http://tailor-api.prod.svc`, `SITE_URL` and `CV_URL` derived from the hosts (`https://tailor.<domain>`, `https://cv.<domain>`), `API_READ_ONLY=true`, `ROBOTS=index`. tailor-api lists tailor-web as its caller in its own folder.
+- ConfigMap `tailor-web-config`: `API_URL=http://tailor-api.prod.svc`, `SITE_URL` and `CV_URL` derived from the hosts (`https://tailor.<domain>`, `https://cv.<domain>`), `API_READ_ONLY=true`, `ROBOTS=noindex`. tailor-api lists tailor-web as its caller in its own folder.
 - Probes: `/health/live` and `/health/ready` (reports the API, does not require it). Both return `x-app-version`, which the post-deploy smoke check waits for.
 
 ## Limitations
