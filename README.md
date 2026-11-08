@@ -100,7 +100,7 @@ The account is the one session cookie of every site under the domain (copied fro
 
 ## Profile
 
-`/profile` is a plain editor of the profile document (D-98): the JSON tailor-api keeps, formatted, in a textarea; **Save** sends it whole (`PUT /api/v1/profile`) and shows the new version, or every path tailor-api refused with its message; **Upload JSON file** puts a file in the editor (saved only by Save); **Download JSON** saves what is in the editor. Before the first save the editor holds `{}`, which saves as a profile with every section empty. The structure: tailor-api's README, "Profile".
+`/profile` is a plain editor of the profile document (D-98): the JSON tailor-api keeps, formatted, in a textarea; **Save** sends it whole (`PUT /api/v1/profile`) and shows the new version, or every path tailor-api refused with its message; **Upload JSON file** puts a file in the editor (saved only by Save); **Download JSON** saves what is in the editor; **Download master CV (PDF)**, once a version is saved, opens `/api/v1/profile/cv.pdf` in a new tab: tailor-api builds the saved profile into a PDF through tailor-tex (no vacancy, up to about a minute; tailor-api's README, "Master CV"), and the proxy streams it with its `content-type` and `content-disposition` (the file name). Before the first save the editor holds `{}`, which saves as a profile with every section empty. The structure: tailor-api's README, "Profile".
 
 ## Request limits and time budgets
 
@@ -111,6 +111,7 @@ From the [service runtime contract](https://github.com/nick-lukashik/.github/blo
 | Request body through `/api` | 1 MiB | `MAX_BODY_BYTES` in `src/lib/http/body-limit.ts` | `413` |
 | Reading that body | 10 s from the start of the request | `API_BODY_TIMEOUT_MS` | `408` |
 | The API call | 10 s from the start of the request | `API_REQUEST_TIMEOUT_MS` (also for server-side calls) | `504` |
+| The API call for a PDF it builds (`GET /api/v1/profile/cv.pdf`) | 70 s, above tailor-api's 65 s | `API_RENDER_TIMEOUT_MS`, routes in `RENDER_ROUTES` of the proxy | `504` |
 | API unreachable | | | `503` |
 | Browser client (`browserApi`) | 12 s | `src/lib/api/client.ts` | `UNAVAILABLE` |
 
@@ -173,6 +174,7 @@ The specs create the applications they need through the API and read expected va
 | `API_URL` | `http://localhost:4000` | at startup |
 | `API_REQUEST_TIMEOUT_MS` | `10000` | at startup; every API call (server-side and the `/api` proxy) |
 | `API_BODY_TIMEOUT_MS` | `10000` | at startup; reading a body the `/api` proxy forwards |
+| `API_RENDER_TIMEOUT_MS` | `70000` | at startup; the `/api` proxy's call for a PDF tailor-api builds (the master CV) |
 | `ID_URL` | none | at startup; id-web's public origin (`https://id.nick-lukashik.com`): "Sign in" links to `${ID_URL}/login?continue=<page>` |
 | `ID_API_URL` | none | at startup; id-api in the cluster (`http://id-api.prod.svc`): refresh, `me`, sign-out |
 | `SESSION_SECRET` | none | at startup; key of the shared session cookie, 32+ characters, the same on every site under the domain (secret `web-session`). Without all three: no accounts (local work with the mock) |

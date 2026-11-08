@@ -22,7 +22,8 @@ import {
  * rather than a rewrite because API_URL is read at runtime (rewrites are
  * fixed at build time), and so every call carries the request id, the
  * service contract's limits (1 MiB body, 10 s to read it, 10 s for the
- * API), an access log line and a contract error when the API is down.
+ * API; longer for the PDFs tailor-api builds, `RENDER_ROUTES`), an access
+ * log line and a contract error when the API is down.
  *
  * Identity (docs/auth.md): the person's access token from the session cookie
  * goes as `Authorization: Bearer`, refreshed here when it is about to expire
@@ -89,8 +90,15 @@ async function identify(request: NextRequest): Promise<Identity> {
     }
 }
 
+/** GETs that wait for tailor-tex (a PDF build, up to 65 s in tailor-api): API_RENDER_TIMEOUT_MS. */
+const RENDER_ROUTES = new Set([
+    '/api/v1/profile/cv.pdf',
+])
+
 const RESPONSE_HEADERS = [
     'content-type',
+    // A PDF names its file (inline; filename="<Name>-<Role>-CV.pdf").
+    'content-disposition',
     'cache-control',
     'retry-after',
     'location',
@@ -113,7 +121,10 @@ function errorResponse(status: number, body: ApiErrorBody) {
 async function forward(request: NextRequest, { params }: RouteContext<'/api/[...path]'>) {
     // Both budgets start with the request: a slow body cannot borrow from the API's time.
     const bodyDeadline = AbortSignal.timeout(serverEnv.API_BODY_TIMEOUT_MS)
-    const upstreamDeadline = AbortSignal.timeout(serverEnv.API_REQUEST_TIMEOUT_MS)
+    const render = request.method === 'GET' && RENDER_ROUTES.has(request.nextUrl.pathname)
+    const upstreamDeadline = AbortSignal.timeout(
+        render ? serverEnv.API_RENDER_TIMEOUT_MS : serverEnv.API_REQUEST_TIMEOUT_MS,
+    )
     const started = performance.now()
     const requestId = requestIdFrom(request.headers.get(REQUEST_ID_HEADER))
     const log = logger.child({

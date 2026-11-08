@@ -89,6 +89,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/profile/cv.pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The master CV: a PDF of the profile without a vacancy, built by tailor-tex (up to 65 s) */
+        get: operations["MasterCvController_pdf_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -100,7 +117,7 @@ export interface components {
         };
         Error: {
             /** @enum {string} */
-            code: "VALIDATION_FAILED" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_INVITED" | "NOT_FOUND" | "PAYLOAD_TOO_LARGE" | "RATE_LIMITED" | "INTERNAL" | "UNAVAILABLE" | "TIMEOUT";
+            code: "VALIDATION_FAILED" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_INVITED" | "NOT_FOUND" | "PAYLOAD_TOO_LARGE" | "UNPROCESSABLE" | "RATE_LIMITED" | "INTERNAL" | "UNAVAILABLE" | "TIMEOUT";
             message: string;
             details?: {
                 path: string;
@@ -553,7 +570,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Database over its time budget or unavailable, retry later (UNAVAILABLE) */
+            /** @description A dependency (Postgres, tailor-tex) over its time budget or unavailable, retry later (UNAVAILABLE) */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -562,7 +579,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Request over its 10 s budget (TIMEOUT) */
+            /** @description Request over its budget, 10 s unless the route says otherwise (TIMEOUT) */
             504: {
                 headers: {
                     [name: string]: unknown;
@@ -632,7 +649,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Database over its time budget or unavailable, retry later (UNAVAILABLE) */
+            /** @description A dependency (Postgres, tailor-tex) over its time budget or unavailable, retry later (UNAVAILABLE) */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -641,7 +658,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Request over its 10 s budget (TIMEOUT) */
+            /** @description Request over its budget, 10 s unless the route says otherwise (TIMEOUT) */
             504: {
                 headers: {
                     [name: string]: unknown;
@@ -721,7 +738,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Database over its time budget or unavailable, retry later (UNAVAILABLE) */
+            /** @description A dependency (Postgres, tailor-tex) over its time budget or unavailable, retry later (UNAVAILABLE) */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -730,7 +747,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Request over its 10 s budget (TIMEOUT) */
+            /** @description Request over its budget, 10 s unless the route says otherwise (TIMEOUT) */
             504: {
                 headers: {
                     [name: string]: unknown;
@@ -799,7 +816,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Database over its time budget or unavailable, retry later (UNAVAILABLE) */
+            /** @description A dependency (Postgres, tailor-tex) over its time budget or unavailable, retry later (UNAVAILABLE) */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -808,7 +825,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Request over its 10 s budget (TIMEOUT) */
+            /** @description Request over its budget, 10 s unless the route says otherwise (TIMEOUT) */
             504: {
                 headers: {
                     [name: string]: unknown;
@@ -872,7 +889,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Database over its time budget or unavailable, retry later (UNAVAILABLE) */
+            /** @description A dependency (Postgres, tailor-tex) over its time budget or unavailable, retry later (UNAVAILABLE) */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -881,7 +898,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Request over its 10 s budget (TIMEOUT) */
+            /** @description Request over its budget, 10 s unless the route says otherwise (TIMEOUT) */
             504: {
                 headers: {
                     [name: string]: unknown;
@@ -958,7 +975,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Database over its time budget or unavailable, retry later (UNAVAILABLE) */
+            /** @description A dependency (Postgres, tailor-tex) over its time budget or unavailable, retry later (UNAVAILABLE) */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -967,7 +984,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Request over its 10 s budget (TIMEOUT) */
+            /** @description Request over its budget, 10 s unless the route says otherwise (TIMEOUT) */
             504: {
                 headers: {
                     [name: string]: unknown;
@@ -1014,7 +1031,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Database over its time budget or unavailable, retry later (UNAVAILABLE) */
+            /** @description A dependency (Postgres, tailor-tex) over its time budget or unavailable, retry later (UNAVAILABLE) */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -1023,7 +1040,90 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Request over its 10 s budget (TIMEOUT) */
+            /** @description Request over its budget, 10 s unless the route says otherwise (TIMEOUT) */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    MasterCvController_pdf_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The PDF, inline, named `<First>-<Last>-<Role>-CV.pdf` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/pdf": string;
+                };
+            };
+            /** @description No valid access token (UNAUTHORIZED) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not on the allowlist of Tailor (NOT_INVITED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not found (NOT_FOUND) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The profile does not make a CV: what is missing, a TeX error or too many pages (UNPROCESSABLE) */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Internal error (INTERNAL) */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description A dependency (Postgres, tailor-tex) over its time budget or unavailable, retry later (UNAVAILABLE) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Request over its budget, 10 s unless the route says otherwise (TIMEOUT) */
             504: {
                 headers: {
                     [name: string]: unknown;
