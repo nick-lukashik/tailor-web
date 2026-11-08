@@ -1,15 +1,15 @@
 # tailor-web
 
-The site of Tailor on `tailor.<domain>`: a CV and a cover letter for each vacancy, and every application on one board. Its backend is [`tailor-api`](https://github.com/nick-lukashik/tailor-api) (OpenAPI copy in `e2e/mock-api/openapi.json`; the bundled mock serves the same contract for development and tests).
+The site of Tailor on `tailor.<domain>`: a CV and a cover letter for each vacancy, and every application on one board. Open only to people whose id-api token carries the `tailor` role; anyone else is redirected to the platform's landing and sees nothing of it. Its backend is [`tailor-api`](https://github.com/nick-lukashik/tailor-api) (OpenAPI copy in `e2e/mock-api/openapi.json`; the bundled mock serves the same contract for development and tests).
 
-Created from [`next-starter`](https://github.com/nick-lukashik/next-starter) (`.template-version`) plus the API part of [`next-example`](https://github.com/nick-lukashik/next-example) (the `/api` proxy, TanStack Query, the typed client, toasts). Now: sign-in through `id`, the home page, the person's applications (list and page, with a link to the demo CV on `cv.<domain>`) and their profile as a JSON editor. Every page but the home page needs a signed-in person whom tailor-api lets in (D-112). The pipeline and the forms come with the logic.
+Created from [`next-starter`](https://github.com/nick-lukashik/next-starter) (`.template-version`) plus the API part of [`next-example`](https://github.com/nick-lukashik/next-example) (the `/api` proxy, TanStack Query, the typed client, toasts). Now: the session of `id`, the person's applications (list and page, with a link to the demo CV on `cv.<domain>`) and their profile as a JSON editor; `/` leads to the applications. Every page needs a signed-in person with the `tailor` role (the owner's decision of 08.11, which replaced the allowlist of D-112). The pipeline and the forms come with the logic.
 
 ## What is inside
 
 - Next.js 16.4 (App Router, `output: 'standalone'`, React Compiler, typed routes), React 19.3, TypeScript 7 strict, Node 26, pnpm 12.
 - TanStack Query 5: server prefetch and `HydrationBoundary`, cursor-based infinite list.
 - Typed API client: types from OpenAPI (`openapi-typescript`), `ApiError` for the error contract, query key factory.
-- SEO: title/description in both languages, canonical, hreflang, Open Graph and Twitter, `robots.txt`, `sitemap.xml`, OG image, icons, manifest, JSON-LD.
+- Metadata: title/description in both languages, canonical, hreflang, Open Graph and Twitter, OG image, icons, manifest, JSON-LD, all neutral (they name only "Tailor"). Not for search engines: `robots.txt` disallows everything, every page says `noindex`, no sitemap.
 - Security: per-request nonce CSP (no `unsafe-inline` for scripts or styles in production), security headers, `/api` proxy on the same origin with a 1 MiB body cap, deadlines and a request header allow-list ([identity model](docs/auth.md)).
 - EN and RU without a locale in the URL.
 - UI: shadcn/ui (Radix base, neutral palette, one light theme): Button, Input, Textarea, Label, Field, Card, Skeleton, Sonner toasts. AA contrast, checked by axe.
@@ -54,16 +54,16 @@ To use the real backend, run `tailor-api` (its README, "Getting started") on `:4
 | API client, errors, keys and query options | `src/lib/api/` (`client.ts`, `errors.ts`, `applications.ts`, `types.ts`) |
 | Applications: server prefetch + `HydrationBoundary`, infinite list | `src/app/(private)/applications/(list)/page.tsx`, `src/app/(private)/applications/_components/applications-list.tsx` |
 | Application page: `generateMetadata`, `notFound()`, the CV link of the application (`CV_URL`) | `src/app/(private)/applications/[id]/page.tsx`, `src/app/(private)/applications/load-application.ts` |
-| Private pages are never indexed (noindex, not in the sitemap) | `src/app/(private)/layout.tsx`, `src/app/sitemap.ts` |
+| Nothing is indexed (noindex everywhere, robots.txt disallows all) | `src/app/layout.tsx`, `src/app/robots.ts` |
 | Optimistic create, per-field errors (when forms arrive) | next-example's `src/app/notes/_components/` |
 | `/api/*` → `API_URL` proxy with the person's token | `src/app/api/[...path]/route.ts` |
 | Session cookie, refresh, sign-out | `src/lib/session/`, `src/proxy.ts`, `src/app/auth/` |
-| Pages behind sign-in, "Sign in" and the invitation page | `src/app/(private)/layout.tsx`, `src/lib/session/access.ts`, `src/components/access/` |
+| Only the `tailor` role: the redirect to the landing, the 404 of `/api` | `src/proxy.ts`, `src/lib/session/claims.ts`, `src/app/api/[...path]/route.ts`, `src/app/(private)/layout.tsx`, `src/lib/session/access.ts` |
 | Profile editor | `src/app/(private)/profile/` |
 | Body cap, request header allow-list | `src/lib/http/body-limit.ts`, `src/lib/http/forwarded-headers.ts` |
 | Identity model and threat model | `docs/auth.md` |
 | CSP, nonce, locale, request id | `src/proxy.ts`, `src/lib/security/` |
-| Metadata, robots, sitemap, OG, icons, manifest, JSON-LD | `src/app/layout.tsx`, `src/app/{robots,sitemap,manifest}.ts`, `src/app/{opengraph-image,icon,apple-icon}.tsx`, `src/lib/seo/` |
+| Metadata, robots, OG, icons, manifest, JSON-LD | `src/app/layout.tsx`, `src/app/{robots,manifest}.ts`, `src/app/{opengraph-image,icon,apple-icon}.tsx`, `src/lib/seo/` |
 | Locales | `src/i18n/` |
 | UI components and tokens | `src/components/ui/`, `components.json`, `src/app/globals.css` |
 | Env | `src/lib/env/` |
@@ -89,13 +89,13 @@ To use the real backend, run `tailor-api` (its README, "Getting started") on `:4
 
 ## Accounts
 
-The account is the one session cookie of every site under the domain (copied from `landing-web`, its README "Accounts"; design: `docs/identity.md` in the org repo). id-web signs in and sets it; this site reads it, refreshes it and sends its access token to tailor-api. Off until `ID_URL`, `ID_API_URL` and `SESSION_SECRET` are set: then every page but `/` needs a person, and `/api` sends their token. Without them (local work against the mock) pages and `/api` work as nobody and `/auth/*` answers 404.
+The account is the one session cookie of every site under the domain (copied from `landing-web`, its README "Accounts"; design: `docs/identity.md` in the org repo). id-web signs in and sets it; this site reads it, refreshes it and sends its access token to tailor-api. Off until `ID_URL`, `ID_API_URL` and `SESSION_SECRET` are set: then everything but `/robots.txt` and `/health/*` needs a person with the `tailor` role, and `/api` sends their token. Without them (local work against the mock) pages and `/api` work as nobody, nothing redirects and `/auth/*` answers 404.
 
 - **The cookie.** `__Secure-nl_session` on the registered domain (`nl_session` with no Domain on plain http): tokens sealed with AES-256-GCM under `SESSION_SECRET`, `HttpOnly`, `SameSite=Lax`, 30 days.
-- **Sign-in** is a link to `${ID_URL}/login?continue=<this page>`, in the header and on every private page without a session.
+- **No sign-in here.** The person signs in elsewhere on the platform; this site never offers it.
 - **Fresh tokens.** With less than 60 s left on the access token, `src/proxy.ts` refreshes it before the page renders (any request with the cookie, a prefetch or a router fetch too, because the page calls tailor-api with it) and rewrites the cookie, in the request too, so the page already sends the new token. The `/api` route does the same for the browser's calls. A refused refresh drops the cookie.
 - **Who.** A page visit asks id-api `GET /api/v1/me` (1 s) for the name in the header and whether the session still stands; nothing else asks it.
-- **Tailor by invitation (D-112).** `src/app/(private)/layout.tsx` asks tailor-api `GET /api/v1/me`: signed out → "Sign in"; a person not on `TAILOR_USERS` → "Tailor is by invitation" with their user id to copy and send to the owner. tailor-api checks the token and the list on every call itself.
+- **Only the `tailor` role.** `src/proxy.ts`, before anything renders and after its refresh: no session, or an access token without `tailor` in `roles` (read from the payload without checking the signature, `src/lib/session/claims.ts`: only id-web can seal the cookie) → 307 to `HOME_URL` with no body, the session cookie kept. `/api/*` answers the same callers 404 and never calls the API. `src/app/(private)/layout.tsx` also asks tailor-api `GET /api/v1/me` (`{ userId, allowed }`) and sends anyone it refuses to `HOME_URL`. tailor-api verifies the token and the role on every call itself (`docs/auth.md`).
 - **`POST /auth/sign-out`** ends the session at id-api and expires the cookie: signed out of every site in this browser.
 
 ## Profile
@@ -156,7 +156,7 @@ The specs create the applications they need through the API and read expected va
 1. `src/app/<path>/page.tsx`, a Server Component.
 2. Text in `src/i18n/messages/en.json` and `ru.json` (same keys; a test checks it).
 3. `generateMetadata` returns only `title` and `description` through `getTranslations`. The root layout adds canonical, hreflang and Open Graph.
-4. Public page: add it to `src/app/sitemap.ts`. Private pages (anything with the user's data) are noindex and stay out of it.
+4. There are no public pages: the proxy lets in only the `tailor` role, and every page is noindex.
 5. Test: e2e in `e2e/`, with an axe check if it has new UI.
 
 ## Adding a request
@@ -175,14 +175,14 @@ The specs create the applications they need through the API and read expected va
 | `API_REQUEST_TIMEOUT_MS` | `10000` | at startup; every API call (server-side and the `/api` proxy) |
 | `API_BODY_TIMEOUT_MS` | `10000` | at startup; reading a body the `/api` proxy forwards |
 | `API_RENDER_TIMEOUT_MS` | `70000` | at startup; the `/api` proxy's call for a PDF tailor-api builds (the master CV) |
-| `ID_URL` | none | at startup; id-web's public origin (`https://id.nick-lukashik.com`): "Sign in" links to `${ID_URL}/login?continue=<page>` |
+| `ID_URL` | none | at startup; id-web's public origin (`https://id.nick-lukashik.com`): the header's account link |
 | `ID_API_URL` | none | at startup; id-api in the cluster (`http://id-api.prod.svc`): refresh, `me`, sign-out |
 | `SESSION_SECRET` | none | at startup; key of the shared session cookie, 32+ characters, the same on every site under the domain (secret `web-session`). Without all three: no accounts (local work with the mock) |
 | `CV_URL` | `http://localhost:4000/api/v1/cv` | at startup; base of the public CV links, `${CV_URL}/<application id>` (tailor-api redirects to `<id>/<Name-Role-CV>.pdf`) (prod: `https://cv.<domain>`) |
 | `SITE_URL` | `http://localhost:3000` | at startup |
+| `HOME_URL` | `https://nick-lukashik.com` | at startup; the platform's landing, where anyone without access is redirected (accounts on only) |
 | `APP_VERSION` | `dev` | at startup (`x-app-version` header) |
 | `LOG_LEVEL` | `info` | at startup |
-| `ROBOTS` | `index` | per request; `noindex` blocks indexing (stage) |
 | `GTM_ID` | none | per request; Google Tag Manager container (`GTM-ABC1234`). Unset: no tag manager, and the CSP stays on this origin. It loads on every visit. The banner says so until "OK", which sets `nl_consent=true` for a year on the whole domain and does nothing else |
 | `OPENAPI_URL` | `e2e/mock-api/openapi.json` | by `pnpm api:types` only |
 
@@ -195,7 +195,7 @@ docker run --rm -p 3000:3000 -e API_URL=http://host.docker.internal:4000 \
 # as in Kubernetes: read-only root filesystem, no capabilities
 docker run --rm -p 3000:3000 --read-only --tmpfs /tmp --tmpfs /app/.next/cache \
   --cap-drop ALL --security-opt no-new-privileges --user 10001:10001 \
-  -e API_URL=http://host.docker.internal:4000 -e ROBOTS=noindex tailor-web
+  -e API_URL=http://host.docker.internal:4000 tailor-web
 ```
 
 Stages: `base` (Node image) → `deps` (pnpm, `pnpm install` with a cache mount) → `build` (`pnpm build`) → `runtime` (standalone output only). `APP_VERSION` is the only build arg: nothing environment-specific is baked in, so one image runs on stage and prod. App files are owned by root, the app runs as uid `10001` and may write only `/tmp` and `.next/cache` (mode `1777`, so a `--tmpfs` there is writable too). `HEALTHCHECK` runs `healthcheck.mjs` against `/health/ready`; Kubernetes ignores it and uses its probes. `node server.js` is PID 1 and exits on `SIGTERM` after in-flight requests finish.
@@ -208,7 +208,7 @@ Versions are pinned exactly. [Renovate](https://docs.renovatebot.com/) (`renovat
 
 `.github/workflows/ci.yml` calls the org reusable workflows from `nick-lukashik/.github` by the moving major tag `@v1`:
 
-- job `ci`: `build.yml@v1` with `kind: web`. It runs `pnpm verify`, then `pnpm test:e2e` on that same build (the mock API, plus servers of the same build with `ROBOTS=noindex`, one whose API is down, and one with accounts on against `e2e/mock-id.mjs`), then builds the image; on `master` it pushes it to GHCR. The required check is `ci / verify`.
+- job `ci`: `build.yml@v1` with `kind: web`. It runs `pnpm verify`, then `pnpm test:e2e` on that same build (the mock API, plus servers of the same build with `GTM_ID`, one whose API is down, and one with accounts on against `e2e/mock-id.mjs`), then builds the image; on `master` it pushes it to GHCR. The required check is `ci / verify`.
 - job `deploy`: on `master`, when an image was pushed: `deploy-pr.yml@v1` opens the gitops PR with the new digest; the owner's merge is the deploy.
 
 ## Deploy
@@ -216,7 +216,7 @@ Versions are pinned exactly. [Renovate](https://docs.renovatebot.com/) (`renovat
 The image follows the [service runtime contract](https://github.com/nick-lukashik/.github/blob/master/docs/service-contract.md) (kind **web**).
 
 - gitops `apps/tailor-web/prod`: `components/service`, `components/web`, `components/subdomain` (`tailor`), the image by digest.
-- ConfigMap `tailor-web-config`: `API_URL=http://tailor-api.prod.svc`, `SITE_URL` and `CV_URL` derived from the hosts (`https://tailor.<domain>`, `https://cv.<domain>`), `ID_URL`, `ID_API_URL`, `ROBOTS=noindex`; `SESSION_SECRET` from the SealedSecret `web-session` (`components/web`); egress to id-api (`api-client`). id-web must list `https://tailor.<domain>` in `FORM_ACTION_ORIGINS`, or "Sign in" does not come back here. tailor-api lists tailor-web as its caller in its own folder.
+- ConfigMap `tailor-web-config`: `API_URL=http://tailor-api.prod.svc`, `SITE_URL` and `CV_URL` derived from the hosts (`https://tailor.<domain>`, `https://cv.<domain>`), `ID_URL`, `ID_API_URL` (`HOME_URL` defaults to prod's landing); `SESSION_SECRET` from the SealedSecret `web-session` (`components/web`); egress to id-api (`api-client`). The smoke check follows redirects: `/` now ends on the landing, so `/robots.txt` is the path that answers 200 from this site itself. tailor-api lists tailor-web as its caller in its own folder.
 - Probes: `/health/live` and `/health/ready` (reports the API, does not require it). Both return `x-app-version`, which the post-deploy smoke check waits for.
 
 ## Limitations

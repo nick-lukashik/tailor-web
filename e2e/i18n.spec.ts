@@ -16,11 +16,11 @@ test.describe('language', () => {
         expect(cookies.find(cookie => cookie.name === 'nl_locale')?.value).toBe('ru')
 
         // Without the parameter the cookie keeps the choice.
-        await page.goto('/')
+        await page.goto('/profile')
         await expect(page.locator('html')).toHaveAttribute('lang', 'ru')
 
         // And ?lang=en switches back.
-        await page.goto('/?lang=en')
+        await page.goto('/profile?lang=en')
         await expect(page.locator('html')).toHaveAttribute('lang', 'en')
         await page.goto('/applications')
         await expect(page.locator('html')).toHaveAttribute('lang', 'en')
@@ -76,8 +76,8 @@ test.describe('first visit with a Russian browser', () => {
     })
 
     test('is still in English', async ({ page }) => {
-        await page.goto('/')
+        await page.goto('/applications')
         await expect(page.locator('html')).toHaveAttribute('lang', 'en')
-        await expect(page).toHaveTitle(en.home.meta.title)
+        await expect(page).toHaveTitle(`${en.applications.meta.title} · ${en.meta.siteName}`)
     })
 })

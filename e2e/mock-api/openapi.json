@@ -62,7 +62,7 @@
                         "bearer": []
                     }
                 ],
-                "summary": "The caller: user id and whether Tailor is open to them",
+                "summary": "The caller: user id and whether the token carries the tailor role",
                 "tags": ["access"]
             }
         },
@@ -133,7 +133,7 @@
                         }
                     },
                     "403": {
-                        "description": "Not on the allowlist of Tailor (NOT_INVITED)",
+                        "description": "The token lacks the tailor role (FORBIDDEN)",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -236,7 +236,7 @@
                         }
                     },
                     "403": {
-                        "description": "Not on the allowlist of Tailor (NOT_INVITED)",
+                        "description": "The token lacks the tailor role (FORBIDDEN)",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -338,7 +338,7 @@
                         }
                     },
                     "403": {
-                        "description": "Not on the allowlist of Tailor (NOT_INVITED)",
+                        "description": "The token lacks the tailor role (FORBIDDEN)",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -422,7 +422,7 @@
                         }
                     },
                     "403": {
-                        "description": "Not on the allowlist of Tailor (NOT_INVITED)",
+                        "description": "The token lacks the tailor role (FORBIDDEN)",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -525,7 +525,7 @@
                         }
                     },
                     "403": {
-                        "description": "Not on the allowlist of Tailor (NOT_INVITED)",
+                        "description": "The token lacks the tailor role (FORBIDDEN)",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -600,7 +600,7 @@
                         }
                     },
                     "403": {
-                        "description": "Not on the allowlist of Tailor (NOT_INVITED)",
+                        "description": "The token lacks the tailor role (FORBIDDEN)",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -676,7 +676,7 @@
                         }
                     },
                     "403": {
-                        "description": "Not on the allowlist of Tailor (NOT_INVITED)",
+                        "description": "The token lacks the tailor role (FORBIDDEN)",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -764,11 +764,11 @@
                         "format": "uuid",
                         "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                     },
-                    "invited": {
+                    "allowed": {
                         "type": "boolean"
                     }
                 },
-                "required": ["userId", "invited"],
+                "required": ["userId", "allowed"],
                 "additionalProperties": false
             },
             "Error": {
@@ -780,7 +780,6 @@
                             "VALIDATION_FAILED",
                             "UNAUTHORIZED",
                             "FORBIDDEN",
-                            "NOT_INVITED",
                             "NOT_FOUND",
                             "PAYLOAD_TOO_LARGE",
                             "UNPROCESSABLE",

@@ -30,7 +30,6 @@ export async function generateMetadata(): Promise<Metadata> {
     ])
     const path = requestHeaders.get(PATHNAME_HEADER) ?? '/'
     const lang = isLocale(locale) ? locale : defaultLocale
-    const noindex = serverEnv.ROBOTS === 'noindex'
     return {
         metadataBase: new URL(serverEnv.SITE_URL),
         title: {
@@ -50,13 +49,11 @@ export async function generateMetadata(): Promise<Metadata> {
         twitter: {
             card: 'summary_large_image',
         },
-        // Indexing is the default; 404s get Next.js' own noindex, so nothing to repeat.
-        robots: noindex
-            ? {
-                  index: false,
-                  follow: false,
-              }
-            : undefined,
+        // Nothing here is for search engines or link previews (robots.txt disallows all).
+        robots: {
+            index: false,
+            follow: false,
+        },
         formatDetection: {
             telephone: false,
             email: false,
@@ -121,7 +118,6 @@ export default async function RootLayout({ children }: LayoutProps<'/'>) {
                             languageNames={names}
                             account={account}
                             accountSite={accounts?.idUrl}
-                            site={site}
                         />
                         <main
                             id="main"

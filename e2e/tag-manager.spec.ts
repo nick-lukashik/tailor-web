@@ -1,5 +1,5 @@
 import { type Page } from '@playwright/test'
-import { en, expect, NOINDEX_URL, test } from './fixtures'
+import { en, expect, GTM_URL, test } from './fixtures'
 
 const SCRIPT = 'https://www.googletagmanager.com/gtm.js**'
 const CONTAINER = 'https://www.googletagmanager.com/gtm.js?id=GTM-E2ETEST'
@@ -42,11 +42,11 @@ const hasLayer = (page: Page) => page.evaluate(() => 'dataLayer' in window)
 
 // The fixture fails any test on a CSP violation: the script and its load are checked by that too.
 test.describe('with GTM_ID', () => {
-    test.skip(!NOINDEX_URL, 'the server with GTM_ID is started by playwright.config.ts')
+    test.skip(!GTM_URL, 'the server with GTM_ID is started by playwright.config.ts')
 
     test('the container loads on the first visit, and the banner stays until "OK"', async ({ page }) => {
         const requested = await stubContainer(page)
-        const response = await page.goto(`${NOINDEX_URL}/`)
+        const response = await page.goto(`${GTM_URL}/`)
         await expect
             .poll(() => requested)
             .toEqual([
@@ -88,9 +88,9 @@ test.describe('with GTM_ID', () => {
 
     test('"OK" is the only button, and its answer has nothing to render', async ({ page }) => {
         await stubContainer(page)
-        await page.goto(`${NOINDEX_URL}/`)
+        await page.goto(`${GTM_URL}/`)
         await expect(banner(page).getByRole('button')).toHaveCount(1)
-        const answer = page.waitForResponse(`${NOINDEX_URL}/consent`)
+        const answer = page.waitForResponse(`${GTM_URL}/consent`)
         await pressOk(page)
         expect((await answer).status()).toBe(204)
     })
@@ -101,16 +101,16 @@ test.describe('with GTM_ID', () => {
             {
                 name: 'nl_consent',
                 value: 'denied',
-                url: NOINDEX_URL as string,
+                url: GTM_URL as string,
             },
         ])
-        await page.goto(`${NOINDEX_URL}/`)
+        await page.goto(`${GTM_URL}/`)
         await expect(banner(page)).toBeVisible()
         await expect.poll(() => requested).toHaveLength(1)
     })
 
     test('a form on another site cannot press it', async ({ page, context }) => {
-        const response = await page.request.post(`${NOINDEX_URL}/consent`, {
+        const response = await page.request.post(`${GTM_URL}/consent`, {
             headers: {
                 'sec-fetch-site': 'cross-site',
             },

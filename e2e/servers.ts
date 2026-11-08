@@ -1,10 +1,10 @@
 // Ports and settings of the servers playwright.config.ts starts; specs and
 // fixtures read them from here.
 
-/** The site against the mock API, ROBOTS=index (the default baseURL). */
+/** The site against the mock API, without accounts (the default baseURL). */
 export const SITE_PORT = 3100
-/** The same build again with ROBOTS=noindex: indexing is runtime config. */
-export const NOINDEX_PORT = 3101
+/** The same build again with GTM_ID: the tag manager is runtime config. */
+export const GTM_PORT = 3101
 /** The same build with an API that does not answer. */
 export const API_DOWN_PORT = 3102
 /** The same build against a real API (E2E_API_URL), project real-api. */
@@ -16,6 +16,8 @@ export const MOCK_API_PORT = 4010
 export const DEAD_API_PORT = 4011
 /** e2e/mock-id.mjs: id-web's /login and the id-api calls of the SSO_PORT site. */
 export const ID_PORT = 4012
+/** HOME_URL of the SSO_PORT site: where anyone without access is sent (a bare page of e2e/mock-id.mjs). */
+export const SSO_HOME_URL = `http://127.0.0.1:${ID_PORT}/landing`
 
 /**
  * The /api proxy's budgets on the SITE_PORT server: shorter than the 10 s

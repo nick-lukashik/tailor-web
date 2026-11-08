@@ -11,7 +11,7 @@ import { loadApplication } from '../load-application'
 export async function generateMetadata({ params }: PageProps<'/applications/[id]'>): Promise<Metadata> {
     const { id } = await params
     const t = await getTranslations('applications.meta')
-    // Signed out or not invited: the layout shows its notice, and nothing names the application.
+    // Without access the layout sends the visitor away, and nothing names the application.
     if (!mayEnter(await requestAccess()))
         return {
             title: t('title'),

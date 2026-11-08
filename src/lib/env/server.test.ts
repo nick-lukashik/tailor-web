@@ -22,7 +22,7 @@ describe('serverEnv', () => {
             API_REQUEST_TIMEOUT_MS: '',
             API_BODY_TIMEOUT_MS: '',
             API_RENDER_TIMEOUT_MS: '',
-            ROBOTS: '',
+            HOME_URL: '',
             CV_URL: '',
             ID_URL: '',
             ID_API_URL: '',
@@ -38,7 +38,7 @@ describe('serverEnv', () => {
             API_BODY_TIMEOUT_MS: 10_000,
             // tailor-api builds the master CV PDF in up to 65 s.
             API_RENDER_TIMEOUT_MS: 70_000,
-            ROBOTS: 'index',
+            HOME_URL: 'https://nick-lukashik.com',
             CV_URL: 'http://localhost:4000/api/v1/cv',
         })
         expect(env.ID_URL).toBeUndefined()
@@ -57,11 +57,11 @@ describe('serverEnv', () => {
         expect(env.ID_API_URL).toBe('http://id-api.example.test')
     })
 
-    it('reads ROBOTS at runtime', async () => {
+    it('reads the landing visitors without access are sent to', async () => {
         const env = await load({
-            ROBOTS: 'noindex',
+            HOME_URL: 'https://example.com/',
         })
-        expect(env.ROBOTS).toBe('noindex')
+        expect(env.HOME_URL).toBe('https://example.com/')
     })
 
     it('drops trailing slashes and coerces numbers', async () => {
@@ -80,9 +80,11 @@ describe('serverEnv', () => {
             load({
                 API_URL: 'not a url',
                 LOG_LEVEL: 'loud',
-                ROBOTS: 'maybe',
+                HOME_URL: 'nowhere',
                 SESSION_SECRET: 'short',
             }),
-        ).rejects.toThrow(/Invalid server environment[\s\S]*API_URL[\s\S]*SESSION_SECRET[\s\S]*LOG_LEVEL[\s\S]*ROBOTS/)
+        ).rejects.toThrow(
+            /Invalid server environment[\s\S]*API_URL[\s\S]*SESSION_SECRET[\s\S]*HOME_URL[\s\S]*LOG_LEVEL/,
+        )
     })
 })

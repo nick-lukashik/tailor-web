@@ -4,11 +4,12 @@ import {
     API_DOWN_PORT,
     BODY_TIMEOUT_MS,
     DEAD_API_PORT,
+    GTM_PORT,
     ID_PORT,
     MOCK_API_PORT,
-    NOINDEX_PORT,
     REAL_API_SITE_PORT,
     SITE_PORT,
+    SSO_HOME_URL,
     SSO_PORT,
     UPSTREAM_TIMEOUT_MS,
 } from './e2e/servers'
@@ -105,12 +106,10 @@ export default defineConfig<BackendOptions>({
                   reuseExistingServer: false,
               },
               site(SITE_PORT, {
-                  ROBOTS: 'index',
                   API_BODY_TIMEOUT_MS: String(BODY_TIMEOUT_MS),
                   API_REQUEST_TIMEOUT_MS: String(UPSTREAM_TIMEOUT_MS),
               }),
-              site(NOINDEX_PORT, {
-                  ROBOTS: 'noindex',
+              site(GTM_PORT, {
                   GTM_ID: 'GTM-E2ETEST',
               }),
               {
@@ -123,11 +122,12 @@ export default defineConfig<BackendOptions>({
                   reuseExistingServer: false,
                   timeout: 30_000,
               },
-              // As prod: accounts on, so the pages need a session and /api sends its token.
+              // As prod: accounts on, so everything needs a session with the tailor role and /api sends its token.
               site(SSO_PORT, {
                   ID_URL: `http://127.0.0.1:${ID_PORT}`,
                   ID_API_URL: `http://127.0.0.1:${ID_PORT}`,
                   SESSION_SECRET,
+                  HOME_URL: SSO_HOME_URL,
               }),
               site(API_DOWN_PORT, {
                   API_URL: `http://127.0.0.1:${DEAD_API_PORT}`,

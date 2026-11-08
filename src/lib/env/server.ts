@@ -29,8 +29,13 @@ const schema = z
         SESSION_SECRET: building
             ? z.string().optional()
             : unsetIfBlank(z.string().min(32, 'at least 32 characters').optional()),
-        /** Public origin of this site: canonical URLs, sitemap, Open Graph. */
+        /** Public origin of this site: canonical URLs, Open Graph. */
         SITE_URL: unsetIfBlank(z.url().default('http://localhost:3000')),
+        /**
+         * The platform's landing. With accounts on, a visitor without a session or without
+         * the `tailor` role is sent there (307), with no word of what this site is.
+         */
+        HOME_URL: unsetIfBlank(z.url().default('https://nick-lukashik.com')),
         /** Build or release identifier, sent as x-app-version. */
         APP_VERSION: unsetIfBlank(z.string().max(64).default('dev')),
         LOG_LEVEL: unsetIfBlank(
@@ -52,21 +57,12 @@ const schema = z
         API_RENDER_TIMEOUT_MS: unsetIfBlank(z.coerce.number().int().positive().default(70_000)),
         /** Budget for reading a request body the /api proxy forwards. */
         API_BODY_TIMEOUT_MS: unsetIfBlank(z.coerce.number().int().positive().default(10_000)),
-        /** `noindex` (stage): robots.txt disallows everything, pages say noindex. */
         /** Google Tag Manager container (GTM-ABC1234). Set: the container on every visit, and a banner with "OK" that says so. Unset: neither, and the CSP stays on this origin. */
         GTM_ID: unsetIfBlank(
             z
                 .string()
                 .regex(/^GTM-[A-Z0-9]{4,12}$/, 'a container id like GTM-ABC1234')
                 .optional(),
-        ),
-        ROBOTS: unsetIfBlank(
-            z
-                .enum([
-                    'index',
-                    'noindex',
-                ])
-                .default('index'),
         ),
     })
     .transform(env => ({

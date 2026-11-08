@@ -5,6 +5,7 @@ import { BodyTooLargeError, declaredLength, discardBody, MAX_BODY_BYTES, readBod
 import { proxiedRequestHeaders } from '@/lib/http/forwarded-headers'
 import { logger } from '@/lib/logger'
 import { REQUEST_ID_HEADER, requestIdFrom } from '@/lib/request-id'
+import { hasTailorRole } from '@/lib/session/claims'
 import {
     accounts,
     cookieName,
@@ -27,9 +28,10 @@ import {
  *
  * Identity (docs/auth.md): the person's access token from the session cookie
  * goes as `Authorization: Bearer`, refreshed here when it is about to expire
- * (the new cookie comes back with the answer). With accounts on, a write needs
- * a session and must come from this site's own pages (Origin / Sec-Fetch-Site);
- * a read without a session goes on as nobody, and tailor-api answers 401.
+ * (the new cookie comes back with the answer). With accounts on, every call needs
+ * a session whose token carries the `tailor` role, or it is a 404 that never
+ * reaches the API (nothing tells there is an API behind); a write must also come
+ * from this site's own pages (Origin / Sec-Fetch-Site).
  *
  * src/proxy.ts does not run for /api: with a proxy, Next.js would buffer
  * up to 10 MB of every body and wait for all of it before this handler starts.
@@ -155,11 +157,13 @@ async function forward(request: NextRequest, { params }: RouteContext<'/api/[...
     // Only the versioned API is exposed; nothing else of the backend.
     if (path[0] !== 'v1') return reject(404, 'NOT_FOUND', 'Not found')
     const write = WRITES.has(request.method)
-    if (accounts && write && !sameOrigin(request.headers)) return reject(403, 'FORBIDDEN', 'Cross-site write refused')
     const identity = await identify(request)
-    // Nobody writes through a public site without signing in.
-    if (accounts && write && !identity.session) {
-        return withCookie(reject(401, 'UNAUTHORIZED', 'Sign in to make changes'), identity)
+    // Without the person Tailor is for, there is nothing here.
+    if (accounts && !(identity.session && hasTailorRole(identity.session.accessToken))) {
+        return withCookie(reject(404, 'NOT_FOUND', 'Not found'), identity)
+    }
+    if (accounts && write && !sameOrigin(request.headers)) {
+        return withCookie(reject(403, 'FORBIDDEN', 'Cross-site write refused'), identity)
     }
 
     let body: Uint8Array<ArrayBuffer> | undefined

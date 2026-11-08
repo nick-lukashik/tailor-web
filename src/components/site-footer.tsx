@@ -16,14 +16,6 @@ export async function SiteFooter() {
                         <li>
                             <a
                                 className="underline-offset-4 hover:underline"
-                                href="/sitemap.xml"
-                            >
-                                sitemap.xml
-                            </a>
-                        </li>
-                        <li>
-                            <a
-                                className="underline-offset-4 hover:underline"
                                 href="/robots.txt"
                             >
                                 robots.txt

@@ -10,10 +10,6 @@ import { LocaleSwitch } from './locale-switch'
 
 const links = [
     {
-        href: '/',
-        label: 'home',
-    },
-    {
         href: '/applications',
         label: 'applications',
     },
@@ -28,25 +24,21 @@ const quiet =
 
 /**
  * `account`: the person signed in, null when nobody is, undefined while the site
- * has no accounts (no sign-in link then). Sign-in is a plain link to the account
- * site, back to this page; sign-out a plain form: both reload the page anyway.
- * (landing-web's header.)
+ * has no accounts. Nobody without access gets this far (src/proxy.ts), so there is no
+ * "Sign in"; sign-out is a plain form that reloads the page anyway. (landing-web's header.)
  */
 export function SiteHeader({
     languageNames,
     account,
     accountSite,
-    site,
 }: {
     languageNames: Record<AppLocale, string>
     account?: Account | null
     accountSite?: string
-    site: string
 }) {
     const t = useTranslations('nav')
     const pathname = usePathname()
-    const isCurrent = (href: string) =>
-        href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(`${href}/`)
+    const isCurrent = (href: string) => pathname === href || pathname.startsWith(`${href}/`)
 
     return (
         <header className="border-b bg-background">
@@ -70,15 +62,7 @@ export function SiteHeader({
                     ))}
                 </nav>
                 <div className="flex flex-wrap items-center gap-1">
-                    {account === null ? (
-                        <a
-                            href={`${accountSite}/login?continue=${encodeURIComponent(`${site}${pathname}`)}`}
-                            rel="nofollow"
-                            className={quiet}
-                        >
-                            {t('signIn')}
-                        </a>
-                    ) : account ? (
+                    {account ? (
                         <>
                             <a
                                 href={`${accountSite}/account`}

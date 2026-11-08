@@ -284,11 +284,11 @@ describe('pathOf', () => {
         })
         expect(
             toApiError(403, {
-                code: 'NOT_INVITED',
-                message: 'Tailor is by invitation',
+                code: 'FORBIDDEN',
+                message: 'Forbidden',
                 requestId: 'r',
             }).code,
-        ).toBe('NOT_INVITED')
+        ).toBe('FORBIDDEN')
         expect(toApiError(401, undefined).code).toBe('UNAUTHORIZED')
     })
 })
