@@ -37,7 +37,7 @@
                         }
                     },
                     "503": {
-                        "description": "Database over its time budget or unavailable, retry later (UNAVAILABLE)",
+                        "description": "A dependency (Postgres, tailor-tex) over its time budget or unavailable, retry later (UNAVAILABLE)",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -47,7 +47,7 @@
                         }
                     },
                     "504": {
-                        "description": "Request over its 10 s budget (TIMEOUT)",
+                        "description": "Request over its budget, 10 s unless the route says otherwise (TIMEOUT)",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -153,7 +153,7 @@
                         }
                     },
                     "503": {
-                        "description": "Database over its time budget or unavailable, retry later (UNAVAILABLE)",
+                        "description": "A dependency (Postgres, tailor-tex) over its time budget or unavailable, retry later (UNAVAILABLE)",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -163,7 +163,7 @@
                         }
                     },
                     "504": {
-                        "description": "Request over its 10 s budget (TIMEOUT)",
+                        "description": "Request over its budget, 10 s unless the route says otherwise (TIMEOUT)",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -266,7 +266,7 @@
                         }
                     },
                     "503": {
-                        "description": "Database over its time budget or unavailable, retry later (UNAVAILABLE)",
+                        "description": "A dependency (Postgres, tailor-tex) over its time budget or unavailable, retry later (UNAVAILABLE)",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -276,7 +276,7 @@
                         }
                     },
                     "504": {
-                        "description": "Request over its 10 s budget (TIMEOUT)",
+                        "description": "Request over its budget, 10 s unless the route says otherwise (TIMEOUT)",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -368,7 +368,7 @@
                         }
                     },
                     "503": {
-                        "description": "Database over its time budget or unavailable, retry later (UNAVAILABLE)",
+                        "description": "A dependency (Postgres, tailor-tex) over its time budget or unavailable, retry later (UNAVAILABLE)",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -378,7 +378,7 @@
                         }
                     },
                     "504": {
-                        "description": "Request over its 10 s budget (TIMEOUT)",
+                        "description": "Request over its budget, 10 s unless the route says otherwise (TIMEOUT)",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -452,7 +452,7 @@
                         }
                     },
                     "503": {
-                        "description": "Database over its time budget or unavailable, retry later (UNAVAILABLE)",
+                        "description": "A dependency (Postgres, tailor-tex) over its time budget or unavailable, retry later (UNAVAILABLE)",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -462,7 +462,7 @@
                         }
                     },
                     "504": {
-                        "description": "Request over its 10 s budget (TIMEOUT)",
+                        "description": "Request over its budget, 10 s unless the route says otherwise (TIMEOUT)",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -555,7 +555,7 @@
                         }
                     },
                     "503": {
-                        "description": "Database over its time budget or unavailable, retry later (UNAVAILABLE)",
+                        "description": "A dependency (Postgres, tailor-tex) over its time budget or unavailable, retry later (UNAVAILABLE)",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -565,7 +565,7 @@
                         }
                     },
                     "504": {
-                        "description": "Request over its 10 s budget (TIMEOUT)",
+                        "description": "Request over its budget, 10 s unless the route says otherwise (TIMEOUT)",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -620,7 +620,7 @@
                         }
                     },
                     "503": {
-                        "description": "Database over its time budget or unavailable, retry later (UNAVAILABLE)",
+                        "description": "A dependency (Postgres, tailor-tex) over its time budget or unavailable, retry later (UNAVAILABLE)",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -630,7 +630,7 @@
                         }
                     },
                     "504": {
-                        "description": "Request over its 10 s budget (TIMEOUT)",
+                        "description": "Request over its budget, 10 s unless the route says otherwise (TIMEOUT)",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -646,6 +646,102 @@
                     }
                 ],
                 "summary": "JSON Schema (draft 2020-12) of the document PUT accepts, for editors",
+                "tags": ["profile"]
+            }
+        },
+        "/api/v1/profile/cv.pdf": {
+            "get": {
+                "operationId": "MasterCvController_pdf_v1",
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "The PDF, inline, named `<First>-<Last>-<Role>-CV.pdf`",
+                        "content": {
+                            "application/pdf": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "No valid access token (UNAUTHORIZED)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Not on the allowlist of Tailor (NOT_INVITED)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found (NOT_FOUND)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "The profile does not make a CV: what is missing, a TeX error or too many pages (UNPROCESSABLE)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal error (INTERNAL)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "A dependency (Postgres, tailor-tex) over its time budget or unavailable, retry later (UNAVAILABLE)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "504": {
+                        "description": "Request over its budget, 10 s unless the route says otherwise (TIMEOUT)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "The master CV: a PDF of the profile without a vacancy, built by tailor-tex (up to 65 s)",
                 "tags": ["profile"]
             }
         }
@@ -687,6 +783,7 @@
                             "NOT_INVITED",
                             "NOT_FOUND",
                             "PAYLOAD_TOO_LARGE",
+                            "UNPROCESSABLE",
                             "RATE_LIMITED",
                             "INTERNAL",
                             "UNAVAILABLE",

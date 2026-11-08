@@ -121,6 +121,8 @@
         "saved": "Saved: version {version}",
         "upload": "Upload JSON file",
         "download": "Download JSON",
+        "masterCv": "Download master CV (PDF)",
+        "masterCvHint": "A PDF of the saved profile, without a vacancy, in a new tab. It can take up to a minute.",
         "loaded": "Loaded {name}. Save to keep it.",
         "invalidJson": "This is not valid JSON: {message}",
         "rejected": "The profile was not saved. Fix these and save again:",

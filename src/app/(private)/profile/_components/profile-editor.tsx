@@ -11,6 +11,9 @@ import { browserApi } from '@/lib/api/browser'
 import { type ApiError, type ApiIssue, isApiError } from '@/lib/api/errors'
 import { profileApi, profileKeys } from '@/lib/api/profile'
 
+/** The master CV of the saved profile: a PDF from tailor-api, opened in a new tab. */
+const MASTER_CV_PATH = '/api/v1/profile/cv.pdf'
+
 type Problem =
     | {
           kind: 'json'
@@ -205,7 +208,31 @@ export function ProfileEditor({ initialVersion, initialText }: { initialVersion:
                 >
                     {t('download')}
                 </Button>
+                {version !== null && (
+                    <Button
+                        asChild
+                        variant="outline"
+                    >
+                        {/* The saved profile, built by tailor-api through the /api proxy (the person's token). */}
+                        <a
+                            href={MASTER_CV_PATH}
+                            target="_blank"
+                            rel="noopener"
+                            aria-describedby={`${editorId}-master-cv`}
+                        >
+                            {t('masterCv')}
+                        </a>
+                    </Button>
+                )}
             </div>
+            {version !== null && (
+                <p
+                    id={`${editorId}-master-cv`}
+                    className="text-sm text-muted-foreground"
+                >
+                    {t('masterCvHint')}
+                </p>
+            )}
             <div aria-live="polite">
                 {notice && <p>{notice}</p>}
                 {problem && (

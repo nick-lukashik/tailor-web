@@ -13,6 +13,7 @@
 // user; ids starting with ffffffff are not invited (403 NOT_INVITED but /me).
 // Anything else is a 401. Profiles are kept per user; a PUT is refused for a
 // document that is not an object, an unknown section, or a person.email without @.
+// GET /api/v1/profile/cv.pdf (the master CV) answers MOCK_PDF for a saved profile.
 import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
@@ -58,6 +59,21 @@ type StoredProfile = {
     document: Record<string, unknown>
 }
 let profiles = new Map<string, StoredProfile>()
+
+/** A minimal one-page PDF: what tailor-api streams for the master CV. */
+const MOCK_PDF = Buffer.from(
+    [
+        '%PDF-1.4',
+        '1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj',
+        '2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj',
+        '3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] >> endobj',
+        'trailer << /Root 1 0 R >>',
+        '%%EOF',
+        '',
+    ].join('\n'),
+    'latin1',
+)
+const MOCK_CV_FILE_NAME = 'Alex-Example-Senior-Engineer-CV.pdf'
 
 const LOCAL_VISITOR = '00000000-0000-7000-8000-000000000000'
 const SECTIONS = [
@@ -257,6 +273,17 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
         const profile = profiles.get(caller)
         if (!profile) return fail(res, 404, 'NOT_FOUND', 'Profile not found', requestId)
         return send(res, 200, profile, requestId)
+    }
+    if (method === 'GET' && path === '/api/v1/profile/cv.pdf') {
+        if (!profiles.has(caller)) return fail(res, 404, 'NOT_FOUND', 'Profile not found', requestId)
+        res.writeHead(200, {
+            'content-type': 'application/pdf',
+            'content-disposition': `inline; filename="${MOCK_CV_FILE_NAME}"`,
+            'content-length': String(MOCK_PDF.length),
+            'cache-control': 'private, no-store',
+            'x-request-id': requestId,
+        })
+        return res.end(MOCK_PDF)
     }
     if (method === 'PUT' && path === '/api/v1/profile') {
         let document: unknown

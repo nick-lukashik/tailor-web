@@ -21,6 +21,7 @@ describe('serverEnv', () => {
             LOG_LEVEL: '',
             API_REQUEST_TIMEOUT_MS: '',
             API_BODY_TIMEOUT_MS: '',
+            API_RENDER_TIMEOUT_MS: '',
             ROBOTS: '',
             CV_URL: '',
             ID_URL: '',
@@ -35,6 +36,8 @@ describe('serverEnv', () => {
             // Service contract time budgets.
             API_REQUEST_TIMEOUT_MS: 10_000,
             API_BODY_TIMEOUT_MS: 10_000,
+            // tailor-api builds the master CV PDF in up to 65 s.
+            API_RENDER_TIMEOUT_MS: 70_000,
             ROBOTS: 'index',
             CV_URL: 'http://localhost:4000/api/v1/cv',
         })

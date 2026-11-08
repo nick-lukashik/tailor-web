@@ -48,6 +48,8 @@ const schema = z
         ),
         /** Budget of every backend call: server-side requests and the /api proxy's upstream call. */
         API_REQUEST_TIMEOUT_MS: unsetIfBlank(z.coerce.number().int().positive().default(10_000)),
+        /** Budget of the /api proxy's call for a PDF that tailor-api builds (the master CV): above its own 65 s. */
+        API_RENDER_TIMEOUT_MS: unsetIfBlank(z.coerce.number().int().positive().default(70_000)),
         /** Budget for reading a request body the /api proxy forwards. */
         API_BODY_TIMEOUT_MS: unsetIfBlank(z.coerce.number().int().positive().default(10_000)),
         /** `noindex` (stage): robots.txt disallows everything, pages say noindex. */

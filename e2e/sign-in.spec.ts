@@ -300,6 +300,51 @@ test.describe('profile', () => {
         expect((await mockApi.requests()).filter(request => request.method === 'PUT')).toHaveLength(1)
     })
 
+    test('offers the master CV once saved: a PDF through /api with the token, in a new tab', async ({
+        page,
+        context,
+    }) => {
+        await signedIn(page, context, `e2e-${randomUUID()}@example.com`, '/profile?lang=en')
+        const masterCv = page.getByRole('link', {
+            name: text.masterCv,
+        })
+        await expect(editor(page)).toHaveValue('{}')
+        await expect(masterCv).toHaveCount(0)
+
+        await editor(page).fill('{"person": {"email": "alex@example.com"}}')
+        await save(page).click()
+        await expect(page.getByText('Saved: version 1')).toBeVisible()
+        await expect(masterCv).toHaveAttribute('href', '/api/v1/profile/cv.pdf')
+        await expect(masterCv).toHaveAttribute('target', '_blank')
+        await expect(masterCv).toHaveAccessibleDescription(text.masterCvHint)
+
+        // Headless Chromium has no PDF viewer: the new tab only loads the file.
+        const opened = page.waitForEvent('popup')
+        const loaded = context.waitForEvent('response', answer => answer.url() === `${SSO_URL}/api/v1/profile/cv.pdf`)
+        await masterCv.click()
+        await opened
+        const answer = await loaded
+        expect(answer.status()).toBe(200)
+        expect(answer.headers()['content-type']).toBe('application/pdf')
+
+        // The proxied answer: the bytes and the headers that name the file.
+        const response = await page.request.get('/api/v1/profile/cv.pdf')
+        expect(response.status()).toBe(200)
+        expect(response.headers()['content-type']).toBe('application/pdf')
+        expect(response.headers()['content-disposition']).toBe('inline; filename="Alex-Example-Senior-Engineer-CV.pdf"')
+        expect(response.headers()['cache-control']).toBe('private, no-store')
+        const body = await response.body()
+        expect(body.subarray(0, 8).toString('latin1')).toBe('%PDF-1.4')
+        expect(body.subarray(-6).toString('latin1')).toBe('%%EOF\n')
+
+        const pdfCalls = (await mockApi.requests()).filter(request => request.path === '/api/v1/profile/cv.pdf')
+        expect(pdfCalls.length).toBeGreaterThanOrEqual(1)
+        for (const call of pdfCalls) {
+            expect(call.headers.authorization).toMatch(/^Bearer at\./)
+            expect(call.headers.cookie).toBeUndefined()
+        }
+    })
+
     test('uploads a JSON file into the editor and downloads it again', async ({ page, context }, testInfo) => {
         await signedIn(page, context, `e2e-${randomUUID()}@example.com`, '/profile?lang=en')
         const file = testInfo.outputPath('profile.json')
