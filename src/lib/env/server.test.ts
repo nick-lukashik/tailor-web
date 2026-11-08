@@ -23,7 +23,9 @@ describe('serverEnv', () => {
             API_BODY_TIMEOUT_MS: '',
             ROBOTS: '',
             CV_URL: '',
-            API_READ_ONLY: '',
+            ID_URL: '',
+            ID_API_URL: '',
+            SESSION_SECRET: '',
         })
         expect(env).toMatchObject({
             API_URL: 'http://localhost:4000',
@@ -35,17 +37,21 @@ describe('serverEnv', () => {
             API_BODY_TIMEOUT_MS: 10_000,
             ROBOTS: 'index',
             CV_URL: 'http://localhost:4000/api/v1/cv',
-            API_READ_ONLY: false,
         })
+        expect(env.ID_URL).toBeUndefined()
+        expect(env.SESSION_SECRET).toBeUndefined()
     })
 
-    it('reads the CV base and the read-only proxy switch', async () => {
+    it('reads the CV base and the account', async () => {
         const env = await load({
             CV_URL: 'https://cv.example.com/',
-            API_READ_ONLY: 'true',
+            ID_URL: 'https://id.example.com/',
+            ID_API_URL: 'http://id-api.example.test',
+            SESSION_SECRET: 'x'.repeat(32),
         })
         expect(env.CV_URL).toBe('https://cv.example.com')
-        expect(env.API_READ_ONLY).toBe(true)
+        expect(env.ID_URL).toBe('https://id.example.com')
+        expect(env.ID_API_URL).toBe('http://id-api.example.test')
     })
 
     it('reads ROBOTS at runtime', async () => {
@@ -72,8 +78,8 @@ describe('serverEnv', () => {
                 API_URL: 'not a url',
                 LOG_LEVEL: 'loud',
                 ROBOTS: 'maybe',
-                API_READ_ONLY: 'perhaps',
+                SESSION_SECRET: 'short',
             }),
-        ).rejects.toThrow(/Invalid server environment[\s\S]*API_URL[\s\S]*API_READ_ONLY[\s\S]*LOG_LEVEL[\s\S]*ROBOTS/)
+        ).rejects.toThrow(/Invalid server environment[\s\S]*API_URL[\s\S]*SESSION_SECRET[\s\S]*LOG_LEVEL[\s\S]*ROBOTS/)
     })
 })

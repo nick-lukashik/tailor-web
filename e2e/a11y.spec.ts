@@ -12,6 +12,7 @@ const pages = [
     '/',
     '/applications',
     '/applications/application-010',
+    '/profile',
     '/nowhere',
 ]
 

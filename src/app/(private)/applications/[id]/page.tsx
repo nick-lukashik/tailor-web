@@ -4,15 +4,20 @@ import { getTranslations } from 'next-intl/server'
 import { applicationKeys } from '@/lib/api/applications'
 import { serverEnv } from '@/lib/env/server'
 import { getServerQueryClient } from '@/lib/query/server'
+import { mayEnter, requestAccess } from '@/lib/session/access'
 import { ApplicationView } from '../_components/application-view'
 import { loadApplication } from '../load-application'
 
 export async function generateMetadata({ params }: PageProps<'/applications/[id]'>): Promise<Metadata> {
     const { id } = await params
-    const [application, t] = await Promise.all([
-        loadApplication(id),
-        getTranslations('applications.meta'),
-    ])
+    const t = await getTranslations('applications.meta')
+    // Signed out or not invited: the layout shows its notice, and nothing names the application.
+    if (!mayEnter(await requestAccess()))
+        return {
+            title: t('title'),
+            description: t('description'),
+        }
+    const application = await loadApplication(id)
     return {
         title: application.role ? `${application.company}: ${application.role}` : application.company,
         description: t('description'),
@@ -26,6 +31,7 @@ export async function generateMetadata({ params }: PageProps<'/applications/[id]
  */
 export default async function ApplicationPage({ params }: PageProps<'/applications/[id]'>) {
     const { id } = await params
+    if (!mayEnter(await requestAccess())) return null
     const application = await loadApplication(id)
     // Seed the client cache with what the server already has: no second fetch.
     const queryClient = getServerQueryClient()

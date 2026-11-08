@@ -1,5 +1,5 @@
 import http from 'node:http'
-import { expect, mockApi, NOINDEX_URL, test, uniqueTitle } from './fixtures'
+import { expect, mockApi, test, uniqueTitle } from './fixtures'
 import { BODY_TIMEOUT_MS, UPSTREAM_TIMEOUT_MS } from './servers'
 
 // The /api proxy against the mock API: the 1 MiB body limit, the body and
@@ -231,40 +231,5 @@ test.describe('/api proxy', () => {
         expect(headers['x-forwarded-for']).toBe('203.0.113.7')
         expect(headers['accept-language']).toBe('ru')
         expect(headers['x-request-id']).toBe('e2e-identity-check')
-    })
-})
-
-test.describe('API_READ_ONLY=true (the noindex server, as in prod until sign-in)', () => {
-    test.skip(!NOINDEX_URL, 'needs the bundled noindex server, started with API_READ_ONLY=true')
-    test.use({
-        baseURL: NOINDEX_URL,
-    })
-    test.beforeEach(async () => {
-        await mockApi.reset()
-    })
-
-    test('a write gets 405 and never reaches the API; reads still work', async ({ request }) => {
-        for (const method of [
-            'POST',
-            'PUT',
-            'PATCH',
-            'DELETE',
-        ]) {
-            const response = await request.fetch('/api/v1/applications', {
-                method,
-                data: {
-                    company: 'Blocked',
-                },
-            })
-            expect(response.status(), method).toBe(405)
-            expect(await response.json()).toMatchObject({
-                code: 'NOT_FOUND',
-                message: 'Writes are off',
-            })
-        }
-        expect(await mockApi.requests()).toEqual([])
-
-        const read = await request.get('/api/v1/applications?limit=1')
-        expect(read.status()).toBe(200)
     })
 })

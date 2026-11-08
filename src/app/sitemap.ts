@@ -26,7 +26,7 @@ function localized(path: string, extra: Omit<Entry, 'url'> = {}): MetadataRoute.
     }))
 }
 
-/** Only the public page: applications are private work (noindex, see src/app/applications/layout.tsx). */
+/** Only the public page: applications are private work (noindex, see src/app/(private)/layout.tsx). */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     return localized('/', {
         changeFrequency: 'weekly',

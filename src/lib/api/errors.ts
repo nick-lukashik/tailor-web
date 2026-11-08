@@ -1,6 +1,11 @@
 /** Error codes of the backend contract. */
 export const contractErrorCodes = [
     'VALIDATION_FAILED',
+    /** No valid access token: sign in (again). */
+    'UNAUTHORIZED',
+    'FORBIDDEN',
+    /** Signed in, but not on tailor-api's allowlist: Tailor is by invitation. */
+    'NOT_INVITED',
     'NOT_FOUND',
     'RATE_LIMITED',
     'INTERNAL',
@@ -44,7 +49,8 @@ export class ApiError extends Error {
     fieldErrors(): Record<string, string> {
         const fields: Record<string, string> = {}
         for (const { path, message } of this.details) {
-            if (path && !(path in fields)) fields[path] = message
+            const field = fieldOf(path)
+            if (field && !(field in fields)) fields[field] = message
         }
         return fields
     }
@@ -57,6 +63,11 @@ export class ApiError extends Error {
 
 export function isApiError(error: unknown): error is ApiError {
     return error instanceof ApiError
+}
+
+/** `a.b.0`, `["a", "b", 0]` → `a.b.0`: the whole path of an issue, `""` for the document itself. */
+export function pathOf(path: unknown): string {
+    return Array.isArray(path) ? path.map(String).join('.') : String(path ?? '')
 }
 
 /** `title`, `/title`, `body.title`, `["title"]` → `title`. */
@@ -76,6 +87,8 @@ function isErrorBody(value: unknown): value is ApiErrorBody {
 
 function codeForStatus(status: number): ApiErrorCode {
     if (status === 400 || status === 422) return 'VALIDATION_FAILED'
+    if (status === 401) return 'UNAUTHORIZED'
+    if (status === 403) return 'FORBIDDEN'
     if (status === 404) return 'NOT_FOUND'
     if (status === 429) return 'RATE_LIMITED'
     if (status === 502 || status === 503 || status === 504) return 'UNAVAILABLE'
@@ -86,7 +99,7 @@ function codeForStatus(status: number): ApiErrorCode {
 export function toApiError(status: number, body: unknown, requestId?: string): ApiError {
     if (isErrorBody(body)) {
         const details = (body.details ?? []).map(issue => ({
-            path: fieldOf(issue.path),
+            path: pathOf(issue.path),
             message: issue.message,
         }))
         return new ApiError(status, body.code, body.message, details, body.requestId || requestId)

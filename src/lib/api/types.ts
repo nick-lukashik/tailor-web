@@ -16,3 +16,8 @@ export type ApplicationStatus = Application['status']
 export type ApplicationPage = JsonOf<paths['/api/v1/applications']['get']['responses'][200]>
 export type ListApplicationsQuery = NonNullable<paths['/api/v1/applications']['get']['parameters']['query']>
 export type CreateApplicationInput = JsonOf<paths['/api/v1/applications']['post']['requestBody']>
+
+export type Me = JsonOf<paths['/api/v1/me']['get']['responses'][200]>
+export type Profile = JsonOf<paths['/api/v1/profile']['get']['responses'][200]>
+export type ProfileDocument = Profile['document']
+export type SavedProfile = JsonOf<paths['/api/v1/profile']['put']['responses'][200]>

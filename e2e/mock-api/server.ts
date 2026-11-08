@@ -7,6 +7,12 @@
 // and clears the request log; GET /__mock/requests lists the /api requests
 // that arrived since (method, path, headers, body size, aborted). Runs on
 // Node's built-in TypeScript support.
+//
+// The caller: no Authorization is a local visitor (a site without accounts),
+// invited. `Bearer at.<user id>.<random>` (the tokens of e2e/mock-id.mjs) is that
+// user; ids starting with ffffffff are not invited (403 NOT_INVITED but /me).
+// Anything else is a 401. Profiles are kept per user; a PUT is refused for a
+// document that is not an object, an unknown section, or a person.email without @.
 import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
@@ -46,9 +52,70 @@ const openapi = readFileSync(new URL('./openapi.json', import.meta.url), 'utf8')
 
 let applications: Application[] = []
 let received: Received[] = []
+type StoredProfile = {
+    version: number
+    updatedAt: string
+    document: Record<string, unknown>
+}
+let profiles = new Map<string, StoredProfile>()
+
+const LOCAL_VISITOR = '00000000-0000-7000-8000-000000000000'
+const SECTIONS = [
+    'person',
+    'career',
+    'employments',
+    'cases',
+    'skills',
+    'education',
+    'languages',
+    'summary',
+    'story',
+    'applicationFacts',
+    'answers',
+    'voice',
+    'settings',
+]
+
+/** Who calls: a user id, or null for a token the mock does not know. */
+function callerOf(req: IncomingMessage): string | null {
+    const header = req.headers.authorization
+    if (!header) return LOCAL_VISITOR
+    return /^Bearer at\.([0-9a-f-]{36})\.[\w-]+$/.exec(header)?.[1] ?? null
+}
+const invited = (userId: string) => !userId.startsWith('ffffffff')
+
+function profileIssues(document: unknown): Issue[] {
+    if (typeof document !== 'object' || document === null || Array.isArray(document))
+        return [
+            {
+                path: '',
+                message: 'Invalid input: expected object',
+            },
+        ]
+    const issues: Issue[] = Object.keys(document)
+        .filter(key => !SECTIONS.includes(key))
+        .map(key => ({
+            path: '',
+            message: `Unrecognized key: "${key}"`,
+        }))
+    const email = (
+        document as {
+            person?: {
+                email?: unknown
+            }
+        }
+    ).person?.email
+    if (email !== undefined && (typeof email !== 'string' || !email.includes('@')))
+        issues.push({
+            path: 'person.email',
+            message: 'Invalid email address',
+        })
+    return issues
+}
 
 function seed() {
     received = []
+    profiles = new Map()
     const start = Date.parse('2026-10-01T09:00:00.000Z')
     applications = Array.from(
         {
@@ -170,6 +237,62 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
     res.on('close', () => {
         if (!res.writableFinished) record.aborted = true
     })
+
+    const caller = callerOf(req)
+    if (!caller) return fail(res, 401, 'UNAUTHORIZED', 'Invalid or expired access token', requestId)
+    if (method === 'GET' && path === '/api/v1/me') {
+        return send(
+            res,
+            200,
+            {
+                userId: caller,
+                invited: invited(caller),
+            },
+            requestId,
+        )
+    }
+    if (!invited(caller)) return fail(res, 403, 'NOT_INVITED', 'Tailor is by invitation', requestId)
+
+    if (method === 'GET' && path === '/api/v1/profile') {
+        const profile = profiles.get(caller)
+        if (!profile) return fail(res, 404, 'NOT_FOUND', 'Profile not found', requestId)
+        return send(res, 200, profile, requestId)
+    }
+    if (method === 'PUT' && path === '/api/v1/profile') {
+        let document: unknown
+        try {
+            document = await readJson(req, record)
+        } catch {
+            return fail(res, 400, 'VALIDATION_FAILED', 'Body is not JSON', requestId, [])
+        }
+        const issues = profileIssues(document)
+        if (issues.length > 0)
+            return fail(res, 400, 'VALIDATION_FAILED', 'Request validation failed', requestId, issues)
+        const profile: StoredProfile = {
+            version: (profiles.get(caller)?.version ?? 0) + 1,
+            updatedAt: new Date().toISOString(),
+            document: {
+                ...Object.fromEntries(
+                    SECTIONS.map(section => [
+                        section,
+                        {},
+                    ]),
+                ),
+                ...(document as Record<string, unknown>),
+            },
+        }
+        profiles.set(caller, profile)
+        return send(
+            res,
+            200,
+            {
+                version: profile.version,
+                sha256: '0'.repeat(64),
+                updatedAt: profile.updatedAt,
+            },
+            requestId,
+        )
+    }
 
     if (method === 'GET' && path === '/api/v1/applications') {
         const limit = Number(url.searchParams.get('limit') ?? 20)

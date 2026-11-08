@@ -1,6 +1,71 @@
 {
     "openapi": "3.0.0",
     "paths": {
+        "/api/v1/me": {
+            "get": {
+                "operationId": "MeController_me_v1",
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Me"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "No valid access token (UNAUTHORIZED)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal error (INTERNAL)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Database over its time budget or unavailable, retry later (UNAVAILABLE)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "504": {
+                        "description": "Request over its 10 s budget (TIMEOUT)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "The caller: user id and whether Tailor is open to them",
+                "tags": ["access"]
+            }
+        },
         "/api/v1/applications": {
             "get": {
                 "operationId": "ApplicationsController_list_v1",
@@ -57,6 +122,26 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "No valid access token (UNAUTHORIZED)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Not on the allowlist of Tailor (NOT_INVITED)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Internal error (INTERNAL)",
                         "content": {
@@ -88,7 +173,12 @@
                         }
                     }
                 },
-                "summary": "Newest applications first, cursor pagination",
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "The caller's applications, newest first, cursor pagination",
                 "tags": ["applications"]
             },
             "post": {
@@ -127,6 +217,26 @@
                     },
                     "400": {
                         "description": "Validation failed (VALIDATION_FAILED)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "No valid access token (UNAUTHORIZED)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Not on the allowlist of Tailor (NOT_INVITED)",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -176,6 +286,11 @@
                         }
                     }
                 },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
                 "tags": ["applications"]
             }
         },
@@ -208,6 +323,26 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/Application"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "No valid access token (UNAUTHORIZED)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Not on the allowlist of Tailor (NOT_INVITED)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
                                 }
                             }
                         }
@@ -253,20 +388,337 @@
                         }
                     }
                 },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
                 "tags": ["applications"]
+            }
+        },
+        "/api/v1/profile": {
+            "get": {
+                "operationId": "ProfileController_get_v1",
+                "parameters": [],
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Profile"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "No valid access token (UNAUTHORIZED)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Not on the allowlist of Tailor (NOT_INVITED)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found (NOT_FOUND)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal error (INTERNAL)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Database over its time budget or unavailable, retry later (UNAVAILABLE)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "504": {
+                        "description": "Request over its 10 s budget (TIMEOUT)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "The profile document and its version; 404 before the first save",
+                "tags": ["profile"]
+            },
+            "put": {
+                "operationId": "ProfileController_save_v1",
+                "parameters": [],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ProfileDocument"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SavedProfile"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Validation failed (VALIDATION_FAILED)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "No valid access token (UNAUTHORIZED)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Not on the allowlist of Tailor (NOT_INVITED)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "413": {
+                        "description": "Request body over 1 MiB (PAYLOAD_TOO_LARGE)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal error (INTERNAL)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Database over its time budget or unavailable, retry later (UNAVAILABLE)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "504": {
+                        "description": "Request over its 10 s budget (TIMEOUT)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Replace the whole document: version + 1 and a snapshot. `{}` is an empty profile",
+                "tags": ["profile"]
+            }
+        },
+        "/api/v1/profile/schema": {
+            "get": {
+                "operationId": "ProfileController_schema_v1",
+                "parameters": [],
+                "responses": {
+                    "401": {
+                        "description": "No valid access token (UNAUTHORIZED)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Not on the allowlist of Tailor (NOT_INVITED)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal error (INTERNAL)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Database over its time budget or unavailable, retry later (UNAVAILABLE)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "504": {
+                        "description": "Request over its 10 s budget (TIMEOUT)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "JSON Schema (draft 2020-12) of the document PUT accepts, for editors",
+                "tags": ["profile"]
             }
         }
     },
     "info": {
         "title": "tailor-api",
         "description": "",
-        "version": "0.1.0",
+        "version": "dev",
         "contact": {}
     },
     "tags": [],
     "servers": [],
     "components": {
         "schemas": {
+            "Me": {
+                "type": "object",
+                "properties": {
+                    "userId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "invited": {
+                        "type": "boolean"
+                    }
+                },
+                "required": ["userId", "invited"],
+                "additionalProperties": false
+            },
+            "Error": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string",
+                        "enum": [
+                            "VALIDATION_FAILED",
+                            "UNAUTHORIZED",
+                            "FORBIDDEN",
+                            "NOT_INVITED",
+                            "NOT_FOUND",
+                            "PAYLOAD_TOO_LARGE",
+                            "RATE_LIMITED",
+                            "INTERNAL",
+                            "UNAVAILABLE",
+                            "TIMEOUT"
+                        ]
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "details": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "path": {
+                                    "type": "string"
+                                },
+                                "message": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": ["path", "message"],
+                            "additionalProperties": false
+                        }
+                    },
+                    "requestId": {
+                        "type": "string"
+                    }
+                },
+                "required": ["code", "message", "requestId"],
+                "additionalProperties": false
+            },
             "ApplicationList": {
                 "type": "object",
                 "properties": {
@@ -318,47 +770,6 @@
                 "required": ["id", "company", "role", "vacancyUrl", "vacancyText", "status", "createdAt"],
                 "additionalProperties": false
             },
-            "Error": {
-                "type": "object",
-                "properties": {
-                    "code": {
-                        "type": "string",
-                        "enum": [
-                            "VALIDATION_FAILED",
-                            "NOT_FOUND",
-                            "PAYLOAD_TOO_LARGE",
-                            "RATE_LIMITED",
-                            "INTERNAL",
-                            "UNAVAILABLE",
-                            "TIMEOUT"
-                        ]
-                    },
-                    "message": {
-                        "type": "string"
-                    },
-                    "details": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "path": {
-                                    "type": "string"
-                                },
-                                "message": {
-                                    "type": "string"
-                                }
-                            },
-                            "required": ["path", "message"],
-                            "additionalProperties": false
-                        }
-                    },
-                    "requestId": {
-                        "type": "string"
-                    }
-                },
-                "required": ["code", "message", "requestId"],
-                "additionalProperties": false
-            },
             "CreateApplication": {
                 "type": "object",
                 "properties": {
@@ -384,6 +795,1279 @@
                     }
                 },
                 "required": ["company"],
+                "additionalProperties": false
+            },
+            "Profile": {
+                "type": "object",
+                "properties": {
+                    "version": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991
+                    },
+                    "updatedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                    },
+                    "document": {
+                        "$ref": "#/components/schemas/ProfileDocument"
+                    }
+                },
+                "required": ["version", "updatedAt", "document"],
+                "additionalProperties": false
+            },
+            "ProfileDocument": {
+                "type": "object",
+                "properties": {
+                    "person": {
+                        "default": {},
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ProfilePerson"
+                            }
+                        ]
+                    },
+                    "career": {
+                        "default": {},
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ProfileCareer"
+                            }
+                        ]
+                    },
+                    "employments": {
+                        "$ref": "#/components/schemas/ProfileEmployments"
+                    },
+                    "cases": {
+                        "$ref": "#/components/schemas/ProfileCases"
+                    },
+                    "skills": {
+                        "$ref": "#/components/schemas/ProfileSkills"
+                    },
+                    "education": {
+                        "default": {},
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ProfileEducation"
+                            }
+                        ]
+                    },
+                    "languages": {
+                        "$ref": "#/components/schemas/ProfileLanguages"
+                    },
+                    "summary": {
+                        "$ref": "#/components/schemas/ProfileSummary"
+                    },
+                    "story": {
+                        "default": {},
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ProfileStory"
+                            }
+                        ]
+                    },
+                    "applicationFacts": {
+                        "default": {},
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ProfileApplicationFacts"
+                            }
+                        ]
+                    },
+                    "answers": {
+                        "$ref": "#/components/schemas/ProfileAnswers"
+                    },
+                    "voice": {
+                        "default": {},
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ProfileVoice"
+                            }
+                        ]
+                    },
+                    "settings": {
+                        "default": {},
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ProfileSettings"
+                            }
+                        ]
+                    }
+                },
+                "additionalProperties": false
+            },
+            "ProfilePerson": {
+                "type": "object",
+                "properties": {
+                    "names": {
+                        "default": [],
+                        "maxItems": 5,
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "locale": {
+                                    "type": "string",
+                                    "enum": ["en", "ru"]
+                                },
+                                "firstName": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 200
+                                },
+                                "lastName": {
+                                    "default": "",
+                                    "type": "string",
+                                    "maxLength": 200
+                                }
+                            },
+                            "required": ["locale", "firstName"],
+                            "additionalProperties": false
+                        }
+                    },
+                    "signatures": {
+                        "default": [],
+                        "maxItems": 5,
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "locale": {
+                                    "type": "string",
+                                    "enum": ["en", "ru"]
+                                },
+                                "text": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 1000
+                                }
+                            },
+                            "required": ["locale", "text"],
+                            "additionalProperties": false
+                        }
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email",
+                        "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+                    },
+                    "phone": {
+                        "type": "object",
+                        "properties": {
+                            "display": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 40
+                            },
+                            "e164": {
+                                "type": "string",
+                                "pattern": "^\\+[1-9]\\d{6,14}$"
+                            }
+                        },
+                        "required": ["display", "e164"],
+                        "additionalProperties": false
+                    },
+                    "telegram": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9_]{5,32}$"
+                    },
+                    "location": {
+                        "default": {},
+                        "type": "object",
+                        "properties": {
+                            "city": {
+                                "default": "",
+                                "type": "string",
+                                "maxLength": 200
+                            },
+                            "country": {
+                                "default": "",
+                                "type": "string",
+                                "maxLength": 200
+                            },
+                            "timezone": {
+                                "default": "",
+                                "type": "string",
+                                "maxLength": 64
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    "links": {
+                        "default": [],
+                        "maxItems": 20,
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "kind": {
+                                    "type": "string",
+                                    "enum": ["linkedin", "github", "website", "portfolio", "telegram", "email", "other"]
+                                },
+                                "url": {
+                                    "type": "string",
+                                    "format": "uri"
+                                },
+                                "label": {
+                                    "default": "",
+                                    "type": "string",
+                                    "maxLength": 200
+                                }
+                            },
+                            "required": ["kind", "url"],
+                            "additionalProperties": false
+                        }
+                    },
+                    "citizenship": {
+                        "default": [],
+                        "maxItems": 5,
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                        }
+                    },
+                    "residence": {
+                        "default": [],
+                        "maxItems": 5,
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                        }
+                    }
+                },
+                "additionalProperties": false
+            },
+            "ProfileCareer": {
+                "type": "object",
+                "properties": {
+                    "headline": {
+                        "default": "",
+                        "type": "string",
+                        "maxLength": 200
+                    },
+                    "targetRoles": {
+                        "default": [],
+                        "maxItems": 10,
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "role": {
+                                    "type": "string",
+                                    "enum": [
+                                        "fullstack",
+                                        "frontend",
+                                        "backend",
+                                        "ai_engineer",
+                                        "platform",
+                                        "devops",
+                                        "mobile",
+                                        "data",
+                                        "qa",
+                                        "engineering_manager"
+                                    ]
+                                },
+                                "headline": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 200
+                                }
+                            },
+                            "required": ["role", "headline"],
+                            "additionalProperties": false
+                        }
+                    },
+                    "stackLine": {
+                        "default": "",
+                        "type": "string",
+                        "maxLength": 1000
+                    },
+                    "careerStartYear": {
+                        "type": "integer",
+                        "minimum": 1950,
+                        "maximum": 2100
+                    },
+                    "seniority": {
+                        "type": "string",
+                        "enum": ["junior", "middle", "senior", "staff", "principal", "lead"]
+                    }
+                },
+                "additionalProperties": false
+            },
+            "ProfileEmployments": {
+                "default": [],
+                "maxItems": 50,
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 64,
+                            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+                        },
+                        "kind": {
+                            "default": "job",
+                            "type": "string",
+                            "enum": ["job", "side_projects"]
+                        },
+                        "company": {
+                            "type": "object",
+                            "properties": {
+                                "name": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 200
+                                },
+                                "website": {
+                                    "type": "string",
+                                    "format": "uri"
+                                },
+                                "domain": {
+                                    "default": "",
+                                    "type": "string",
+                                    "maxLength": 200
+                                },
+                                "industry": {
+                                    "default": "",
+                                    "type": "string",
+                                    "maxLength": 200
+                                },
+                                "size": {
+                                    "default": "",
+                                    "type": "string",
+                                    "maxLength": 200
+                                },
+                                "description": {
+                                    "default": "",
+                                    "type": "string",
+                                    "maxLength": 1000
+                                }
+                            },
+                            "required": ["name"],
+                            "additionalProperties": false
+                        },
+                        "title": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                        },
+                        "start": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+                        },
+                        "end": {
+                            "default": null,
+                            "nullable": true,
+                            "type": "string",
+                            "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+                        },
+                        "location": {
+                            "default": "",
+                            "type": "string",
+                            "maxLength": 200
+                        },
+                        "format": {
+                            "type": "string",
+                            "enum": ["remote", "hybrid", "office"]
+                        },
+                        "order": {
+                            "default": 0,
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 1000
+                        },
+                        "quota": {
+                            "type": "object",
+                            "properties": {
+                                "general": {
+                                    "type": "object",
+                                    "properties": {
+                                        "min": {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "maximum": 20
+                                        },
+                                        "target": {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "maximum": 20
+                                        }
+                                    },
+                                    "required": ["min", "target"],
+                                    "additionalProperties": false
+                                },
+                                "ai": {
+                                    "type": "object",
+                                    "properties": {
+                                        "min": {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "maximum": 20
+                                        },
+                                        "target": {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "maximum": 20
+                                        }
+                                    },
+                                    "required": ["min", "target"],
+                                    "additionalProperties": false
+                                }
+                            },
+                            "required": ["general", "ai"],
+                            "additionalProperties": false
+                        },
+                        "aiOnly": {
+                            "default": false,
+                            "type": "boolean"
+                        },
+                        "fixedBullets": {
+                            "default": [],
+                            "maxItems": 20,
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 1000
+                            }
+                        },
+                        "projects": {
+                            "default": [],
+                            "maxItems": 100,
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 64,
+                                        "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 200
+                                    },
+                                    "description": {
+                                        "default": "",
+                                        "type": "string",
+                                        "maxLength": 1000
+                                    }
+                                },
+                                "required": ["id", "name"],
+                                "additionalProperties": false
+                            }
+                        }
+                    },
+                    "required": ["id", "company", "title", "start"],
+                    "additionalProperties": false
+                }
+            },
+            "ProfileCases": {
+                "default": [],
+                "maxItems": 500,
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 64,
+                            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+                        },
+                        "employmentId": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 64,
+                            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+                        },
+                        "projectId": {
+                            "default": null,
+                            "nullable": true,
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 64,
+                            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+                        },
+                        "title": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                        },
+                        "primaryTheme": {
+                            "default": "",
+                            "type": "string",
+                            "maxLength": 100
+                        },
+                        "secondaryThemes": {
+                            "default": [],
+                            "maxItems": 20,
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 100
+                            }
+                        },
+                        "achievementGroup": {
+                            "default": "",
+                            "type": "string",
+                            "maxLength": 64
+                        },
+                        "technologies": {
+                            "default": [],
+                            "maxItems": 100,
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 100
+                            }
+                        },
+                        "capabilities": {
+                            "default": [],
+                            "maxItems": 50,
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 64,
+                                        "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 200
+                                    }
+                                },
+                                "required": ["id", "name"],
+                                "additionalProperties": false
+                            }
+                        },
+                        "keyClaims": {
+                            "default": [],
+                            "maxItems": 20,
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 64,
+                                        "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+                                    },
+                                    "text": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 1000
+                                    }
+                                },
+                                "required": ["id", "text"],
+                                "additionalProperties": false
+                            }
+                        },
+                        "metricClaims": {
+                            "default": [],
+                            "maxItems": 20,
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "id": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 64,
+                                        "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+                                    },
+                                    "text": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 1000
+                                    }
+                                },
+                                "required": ["id", "text"],
+                                "additionalProperties": false
+                            }
+                        },
+                        "variants": {
+                            "type": "object",
+                            "properties": {
+                                "full": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 5000
+                                },
+                                "compact": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 5000
+                                },
+                                "minimal": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 5000
+                                }
+                            },
+                            "required": ["full", "compact", "minimal"],
+                            "additionalProperties": false
+                        },
+                        "categoryRatings": {
+                            "default": {},
+                            "type": "object",
+                            "properties": {
+                                "FE": {
+                                    "default": 0,
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 5
+                                },
+                                "BE": {
+                                    "default": 0,
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 5
+                                },
+                                "AR": {
+                                    "default": 0,
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 5
+                                },
+                                "RE": {
+                                    "default": 0,
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 5
+                                },
+                                "PF": {
+                                    "default": 0,
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 5
+                                },
+                                "QA": {
+                                    "default": 0,
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 5
+                                },
+                                "SE": {
+                                    "default": 0,
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 5
+                                },
+                                "OW": {
+                                    "default": 0,
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 5
+                                },
+                                "EE": {
+                                    "default": 0,
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 5
+                                },
+                                "CO": {
+                                    "default": 0,
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 5
+                                },
+                                "UX": {
+                                    "default": 0,
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 5
+                                },
+                                "AI": {
+                                    "default": 0,
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 5
+                                }
+                            },
+                            "additionalProperties": false
+                        },
+                        "whenVacancyMentions": {
+                            "default": [],
+                            "maxItems": 50,
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 100
+                            }
+                        },
+                        "active": {
+                            "default": true,
+                            "type": "boolean"
+                        }
+                    },
+                    "required": ["id", "employmentId", "title", "variants"],
+                    "additionalProperties": false
+                }
+            },
+            "ProfileSkills": {
+                "default": [],
+                "maxItems": 50,
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "label": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 100
+                        },
+                        "items": {
+                            "default": [],
+                            "maxItems": 100,
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 100
+                                    },
+                                    "aliases": {
+                                        "default": [],
+                                        "maxItems": 10,
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string",
+                                            "minLength": 1,
+                                            "maxLength": 100
+                                        }
+                                    },
+                                    "core": {
+                                        "default": false,
+                                        "type": "boolean"
+                                    }
+                                },
+                                "required": ["name"],
+                                "additionalProperties": false
+                            }
+                        }
+                    },
+                    "required": ["label"],
+                    "additionalProperties": false
+                }
+            },
+            "ProfileEducation": {
+                "type": "object",
+                "properties": {
+                    "degrees": {
+                        "default": [],
+                        "maxItems": 20,
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "institution": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 200
+                                },
+                                "degree": {
+                                    "default": "",
+                                    "type": "string",
+                                    "maxLength": 200
+                                },
+                                "field": {
+                                    "default": "",
+                                    "type": "string",
+                                    "maxLength": 200
+                                },
+                                "start": {
+                                    "type": "string",
+                                    "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+                                },
+                                "end": {
+                                    "type": "string",
+                                    "pattern": "^\\d{4}-(0[1-9]|1[0-2])$"
+                                }
+                            },
+                            "required": ["institution"],
+                            "additionalProperties": false
+                        }
+                    },
+                    "certificates": {
+                        "default": [],
+                        "maxItems": 50,
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 200
+                                },
+                                "issuer": {
+                                    "default": "",
+                                    "type": "string",
+                                    "maxLength": 200
+                                },
+                                "year": {
+                                    "type": "integer",
+                                    "minimum": 1950,
+                                    "maximum": 2100
+                                },
+                                "url": {
+                                    "type": "string",
+                                    "format": "uri"
+                                }
+                            },
+                            "required": ["name"],
+                            "additionalProperties": false
+                        }
+                    }
+                },
+                "additionalProperties": false
+            },
+            "ProfileLanguages": {
+                "default": [],
+                "maxItems": 30,
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "code": {
+                            "type": "string",
+                            "pattern": "^[a-z]{2,3}$"
+                        },
+                        "name": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 100
+                        },
+                        "level": {
+                            "type": "string",
+                            "enum": ["native", "c2", "c1", "b2", "b1", "a2", "a1", "none"]
+                        },
+                        "note": {
+                            "default": "",
+                            "type": "string",
+                            "maxLength": 200
+                        }
+                    },
+                    "required": ["code", "name", "level"],
+                    "additionalProperties": false
+                }
+            },
+            "ProfileSummary": {
+                "default": [],
+                "maxItems": 20,
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 64,
+                            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+                        },
+                        "full": {
+                            "default": "",
+                            "type": "string",
+                            "maxLength": 5000
+                        },
+                        "compact": {
+                            "default": "",
+                            "type": "string",
+                            "maxLength": 5000
+                        }
+                    },
+                    "required": ["id"],
+                    "additionalProperties": false
+                }
+            },
+            "ProfileStory": {
+                "type": "object",
+                "properties": {
+                    "aboutMe": {
+                        "default": "",
+                        "type": "string",
+                        "maxLength": 20000
+                    },
+                    "careerPath": {
+                        "default": [],
+                        "maxItems": 50,
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 5000
+                        }
+                    },
+                    "personal": {
+                        "default": [],
+                        "maxItems": 200,
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 64,
+                                    "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+                                },
+                                "text": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 5000
+                                },
+                                "tags": {
+                                    "default": [],
+                                    "maxItems": 20,
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 50
+                                    }
+                                }
+                            },
+                            "required": ["id", "text"],
+                            "additionalProperties": false
+                        }
+                    },
+                    "motivation": {
+                        "default": "",
+                        "type": "string",
+                        "maxLength": 5000
+                    }
+                },
+                "additionalProperties": false
+            },
+            "ProfileApplicationFacts": {
+                "type": "object",
+                "properties": {
+                    "workAuthorization": {
+                        "default": {},
+                        "type": "object",
+                        "properties": {
+                            "needsSponsorship": {
+                                "type": "boolean"
+                            },
+                            "byCountry": {
+                                "default": [],
+                                "maxItems": 100,
+                                "type": "array",
+                                "items": {
+                                    "type": "object",
+                                    "properties": {
+                                        "country": {
+                                            "type": "string",
+                                            "pattern": "^[A-Z]{2}$"
+                                        },
+                                        "authorized": {
+                                            "type": "boolean"
+                                        },
+                                        "needsVisa": {
+                                            "default": false,
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "required": ["country", "authorized"],
+                                    "additionalProperties": false
+                                }
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    "relocation": {
+                        "default": {},
+                        "type": "object",
+                        "properties": {
+                            "willing": {
+                                "type": "boolean"
+                            },
+                            "destinations": {
+                                "default": [],
+                                "maxItems": 50,
+                                "type": "array",
+                                "items": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 200
+                                }
+                            }
+                        },
+                        "additionalProperties": false
+                    },
+                    "workFormats": {
+                        "default": [],
+                        "maxItems": 3,
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "enum": ["remote", "hybrid", "office"]
+                        }
+                    },
+                    "salary": {
+                        "default": [],
+                        "maxItems": 20,
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "amount": {
+                                    "type": "integer",
+                                    "minimum": 0,
+                                    "maximum": 100000000
+                                },
+                                "currency": {
+                                    "type": "string",
+                                    "pattern": "^[A-Z]{3}$"
+                                },
+                                "period": {
+                                    "type": "string",
+                                    "enum": ["hour", "month", "year"]
+                                },
+                                "basis": {
+                                    "type": "string",
+                                    "enum": ["gross", "net"]
+                                },
+                                "contract": {
+                                    "default": "",
+                                    "type": "string",
+                                    "maxLength": 100
+                                }
+                            },
+                            "required": ["amount", "currency", "period"],
+                            "additionalProperties": false
+                        }
+                    },
+                    "noticePeriodWeeks": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 52
+                    },
+                    "contract": {
+                        "default": "",
+                        "type": "string",
+                        "maxLength": 1000
+                    },
+                    "usTaxForm": {
+                        "default": "",
+                        "type": "string",
+                        "maxLength": 50
+                    },
+                    "availableFrom": {
+                        "type": "string",
+                        "format": "date",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+                    },
+                    "eeo": {
+                        "default": "prefer_not_to_say",
+                        "type": "string",
+                        "enum": ["prefer_not_to_say"]
+                    }
+                },
+                "additionalProperties": false
+            },
+            "ProfileAnswers": {
+                "default": [],
+                "maxItems": 500,
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "id": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 64,
+                            "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+                        },
+                        "questionClass": {
+                            "type": "string",
+                            "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)*$"
+                        },
+                        "locale": {
+                            "type": "string",
+                            "enum": ["en", "ru"]
+                        },
+                        "text": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 20000
+                        },
+                        "short": {
+                            "default": "",
+                            "type": "string",
+                            "maxLength": 5000
+                        },
+                        "tags": {
+                            "default": [],
+                            "maxItems": 20,
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 50
+                            }
+                        }
+                    },
+                    "required": ["id", "questionClass", "locale", "text"],
+                    "additionalProperties": false
+                }
+            },
+            "ProfileVoice": {
+                "type": "object",
+                "properties": {
+                    "rules": {
+                        "default": [],
+                        "maxItems": 100,
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 1000
+                        }
+                    },
+                    "stopPhrases": {
+                        "default": [],
+                        "maxItems": 200,
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 200
+                        }
+                    },
+                    "templates": {
+                        "default": [],
+                        "maxItems": 50,
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 64,
+                                    "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+                                },
+                                "channel": {
+                                    "type": "string",
+                                    "enum": ["telegram", "email", "linkedin"]
+                                },
+                                "locale": {
+                                    "type": "string",
+                                    "enum": ["en", "ru"]
+                                },
+                                "subject": {
+                                    "default": "",
+                                    "type": "string",
+                                    "maxLength": 200
+                                },
+                                "text": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 20000
+                                }
+                            },
+                            "required": ["id", "channel", "locale", "text"],
+                            "additionalProperties": false
+                        }
+                    },
+                    "samples": {
+                        "default": [],
+                        "maxItems": 10,
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "locale": {
+                                    "type": "string",
+                                    "enum": ["en", "ru"]
+                                },
+                                "text": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 20000
+                                }
+                            },
+                            "required": ["locale", "text"],
+                            "additionalProperties": false
+                        }
+                    }
+                },
+                "additionalProperties": false
+            },
+            "ProfileSettings": {
+                "type": "object",
+                "properties": {
+                    "maxPages": {
+                        "default": 2,
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 3
+                    },
+                    "template": {
+                        "default": "minimal-violet",
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64,
+                        "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+                    },
+                    "font": {
+                        "default": "",
+                        "type": "string",
+                        "maxLength": 64
+                    },
+                    "cvLocale": {
+                        "default": "en",
+                        "type": "string",
+                        "enum": ["en"]
+                    },
+                    "factsMode": {
+                        "default": "strict",
+                        "type": "string",
+                        "enum": ["strict", "free"]
+                    }
+                },
+                "additionalProperties": false
+            },
+            "SavedProfile": {
+                "type": "object",
+                "properties": {
+                    "version": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991
+                    },
+                    "sha256": {
+                        "type": "string",
+                        "pattern": "^[0-9a-f]{64}$"
+                    },
+                    "updatedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                    }
+                },
+                "required": ["version", "sha256", "updatedAt"],
                 "additionalProperties": false
             }
         }

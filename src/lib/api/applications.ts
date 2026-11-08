@@ -20,7 +20,7 @@ export const applicationsApi = {
         api.request<Application>(`/api/v1/applications/${encodeURIComponent(id)}`, {
             signal,
         }),
-    /** Not used by the pages yet: writes are off in prod until sign-in (API_READ_ONLY). */
+    /** Not used by the pages yet (applications are added by the pipeline, later). */
     create: (api: ApiClient, input: CreateApplicationInput) =>
         api.request<Application>('/api/v1/applications', {
             method: 'POST',
