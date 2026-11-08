@@ -2,7 +2,7 @@
 
 The site of Tailor on `tailor.<domain>`: a CV and a cover letter for each vacancy, and every application on one board. Its backend is [`tailor-api`](https://github.com/nick-lukashik/tailor-api) (OpenAPI copy in `e2e/mock-api/openapi.json`; the bundled mock serves the same contract for development and tests).
 
-Created from [`next-starter`](https://github.com/nick-lukashik/next-starter) (`.template-version`) plus the API part of [`next-example`](https://github.com/nick-lukashik/next-example) (the `/api` proxy, TanStack Query, the typed client, toasts). Now a skeleton: the home page, the list of applications and an application page with a link to the demo CV on `cv.<domain>`. The pipeline, the forms and sign-in come with the logic; until sign-in, prod runs the proxy read-only (`API_READ_ONLY=true`).
+Created from [`next-starter`](https://github.com/nick-lukashik/next-starter) (`.template-version`) plus the API part of [`next-example`](https://github.com/nick-lukashik/next-example) (the `/api` proxy, TanStack Query, the typed client, toasts). Now: sign-in through `id`, the home page, the person's applications (list and page, with a link to the demo CV on `cv.<domain>`) and their profile as a JSON editor. Every page but the home page needs a signed-in person whom tailor-api lets in (D-112). The pipeline and the forms come with the logic.
 
 ## What is inside
 
@@ -52,13 +52,16 @@ To use the real backend, run `tailor-api` (its README, "Getting started") on `:4
 |---|---|
 | QueryClient: browser singleton, one per request on the server, devtools in dev only | `src/lib/query/`, `src/app/providers.tsx` |
 | API client, errors, keys and query options | `src/lib/api/` (`client.ts`, `errors.ts`, `applications.ts`, `types.ts`) |
-| Applications: server prefetch + `HydrationBoundary`, infinite list | `src/app/applications/(list)/page.tsx`, `src/app/applications/_components/applications-list.tsx` |
-| Application page: `generateMetadata`, `notFound()`, the CV link of the application (`CV_URL`) | `src/app/applications/[id]/page.tsx`, `src/app/applications/load-application.ts` |
-| Applications are never indexed (noindex, not in the sitemap) | `src/app/applications/layout.tsx`, `src/app/sitemap.ts` |
+| Applications: server prefetch + `HydrationBoundary`, infinite list | `src/app/(private)/applications/(list)/page.tsx`, `src/app/(private)/applications/_components/applications-list.tsx` |
+| Application page: `generateMetadata`, `notFound()`, the CV link of the application (`CV_URL`) | `src/app/(private)/applications/[id]/page.tsx`, `src/app/(private)/applications/load-application.ts` |
+| Private pages are never indexed (noindex, not in the sitemap) | `src/app/(private)/layout.tsx`, `src/app/sitemap.ts` |
 | Optimistic create, per-field errors (when forms arrive) | next-example's `src/app/notes/_components/` |
-| `/api/*` → `API_URL` proxy, read-only with `API_READ_ONLY` | `src/app/api/[...path]/route.ts` |
+| `/api/*` → `API_URL` proxy with the person's token | `src/app/api/[...path]/route.ts` |
+| Session cookie, refresh, sign-out | `src/lib/session/`, `src/proxy.ts`, `src/app/auth/` |
+| Pages behind sign-in, "Sign in" and the invitation page | `src/app/(private)/layout.tsx`, `src/lib/session/access.ts`, `src/components/access/` |
+| Profile editor | `src/app/(private)/profile/` |
 | Body cap, request header allow-list | `src/lib/http/body-limit.ts`, `src/lib/http/forwarded-headers.ts` |
-| Identity model (not implemented yet) | `docs/auth.md` |
+| Identity model and threat model | `docs/auth.md` |
 | CSP, nonce, locale, request id | `src/proxy.ts`, `src/lib/security/` |
 | Metadata, robots, sitemap, OG, icons, manifest, JSON-LD | `src/app/layout.tsx`, `src/app/{robots,sitemap,manifest}.ts`, `src/app/{opengraph-image,icon,apple-icon}.tsx`, `src/lib/seo/` |
 | Locales | `src/i18n/` |
@@ -70,9 +73,9 @@ To use the real backend, run `tailor-api` (its README, "Getting started") on `:4
 
 ## How it works
 
-**The API proxy is a route handler, not `rewrites`.** `rewrites` in `next.config.ts` are evaluated at build time, which would bake the API address into the image. The route handler reads `API_URL` at startup (one image for every environment), forwards the request id and an allow-list of headers, enforces the body cap and deadlines below, writes a log line and answers with a contract error when the API is down. The browser talks only to its own origin: no CORS, `connect-src 'self'` in the CSP. The one exception is analytics: with `GTM_ID` set, `connect-src` also allows Google's hosts, for Tag Manager and Google Analytics only. Only `/api/v1/*` is exposed. With `API_READ_ONLY=true` (prod until sign-in) only `GET` and `HEAD` pass; any write gets `405` and never reaches the API. `src/proxy.ts` does not run for `/api`: for every request it matches, Next.js buffers the body (up to 10 MB) and waits for all of it before the route handler starts, which would defeat the cap and the body deadline.
+**The API proxy is a route handler, not `rewrites`.** `rewrites` in `next.config.ts` are evaluated at build time, which would bake the API address into the image. The route handler reads `API_URL` at startup (one image for every environment), forwards the request id and an allow-list of headers, enforces the body cap and deadlines below, writes a log line and answers with a contract error when the API is down. The browser talks only to its own origin: no CORS, `connect-src 'self'` in the CSP. The one exception is analytics: with `GTM_ID` set, `connect-src` also allows Google's hosts, for Tag Manager and Google Analytics only. Only `/api/v1/*` is exposed. With accounts on, a write (`POST`, `PUT`, `PATCH`, `DELETE`) needs a session (else `401` without reaching the API) and must come from this site (`Origin`, or `Sec-Fetch-Site: same-origin`; else `403`). `src/proxy.ts` does not run for `/api`: for every request it matches, Next.js buffers the body (up to 10 MB) and waits for all of it before the route handler starts, which would defeat the cap and the body deadline.
 
-**Headers to the API.** The proxy and `serverApi` forward `accept`, `accept-language`, `content-type`, `user-agent`, the request id, and `x-forwarded-for` set to the one address in `x-real-ip` (written by Traefik's `real-ip` middleware, so the API's per-client rate limit still sees the visitor). Everything else is dropped, `authorization`, `cookie`, the client's `x-forwarded-*` and `x-user-*` included. How a future version passes the user's identity: [docs/auth.md](docs/auth.md).
+**Headers to the API.** The proxy and `serverApi` forward `accept`, `accept-language`, `content-type`, `user-agent`, the request id, and `x-forwarded-for` set to the one address in `x-real-ip` (written by Traefik's `real-ip` middleware, so the API's per-client rate limit still sees the visitor). Everything else is dropped, `authorization`, `cookie`, the client's `x-forwarded-*` and `x-user-*` included. The one identity header is `authorization: Bearer <access token>`, built by this server from the session cookie: [docs/auth.md](docs/auth.md).
 
 **Data.** Query options take the client as the first argument: Server Components pass `await serverApi()` (straight to `API_URL`), client components pass `browserApi` (through `/api`). Same key, same cache.
 
@@ -83,6 +86,21 @@ To use the real backend, run `tailor-api` (its README, "Getting started") on `:4
 **CSP and styles.** Production `style-src` is `'self' 'nonce-…'` plus two hashes, without `unsafe-inline`. No component used here renders a `style` attribute on the server; Sonner's toasts set theirs in the browser through the DOM, which the CSP does not restrict. Sonner does inject its stylesheet as a `<style>` element at runtime, which cannot carry a nonce, so `src/lib/security/csp.ts` allows exactly that stylesheet (and the empty `<style>` it appends first) by SHA-256. A unit test recomputes the hash from `node_modules/sonner`, so a Sonner update that changes its CSS fails `pnpm verify` until the hash is updated; the e2e suite fails on any CSP violation.
 
 **404.** A route that can answer 404 must not have a `loading.tsx` above it: a stream that has started has already sent 200. So the list's `loading.tsx` sits in the `(list)` group and `/applications/[id]` has none.
+
+## Accounts
+
+The account is the one session cookie of every site under the domain (copied from `landing-web`, its README "Accounts"; design: `docs/identity.md` in the org repo). id-web signs in and sets it; this site reads it, refreshes it and sends its access token to tailor-api. Off until `ID_URL`, `ID_API_URL` and `SESSION_SECRET` are set: then every page but `/` needs a person, and `/api` sends their token. Without them (local work against the mock) pages and `/api` work as nobody and `/auth/*` answers 404.
+
+- **The cookie.** `__Secure-nl_session` on the registered domain (`nl_session` with no Domain on plain http): tokens sealed with AES-256-GCM under `SESSION_SECRET`, `HttpOnly`, `SameSite=Lax`, 30 days.
+- **Sign-in** is a link to `${ID_URL}/login?continue=<this page>`, in the header and on every private page without a session.
+- **Fresh tokens.** With less than 60 s left on the access token, `src/proxy.ts` refreshes it before the page renders (any request with the cookie, a prefetch or a router fetch too, because the page calls tailor-api with it) and rewrites the cookie, in the request too, so the page already sends the new token. The `/api` route does the same for the browser's calls. A refused refresh drops the cookie.
+- **Who.** A page visit asks id-api `GET /api/v1/me` (1 s) for the name in the header and whether the session still stands; nothing else asks it.
+- **Tailor by invitation (D-112).** `src/app/(private)/layout.tsx` asks tailor-api `GET /api/v1/me`: signed out → "Sign in"; a person not on `TAILOR_USERS` → "Tailor is by invitation" with their user id to copy and send to the owner. tailor-api checks the token and the list on every call itself.
+- **`POST /auth/sign-out`** ends the session at id-api and expires the cookie: signed out of every site in this browser.
+
+## Profile
+
+`/profile` is a plain editor of the profile document (D-98): the JSON tailor-api keeps, formatted, in a textarea; **Save** sends it whole (`PUT /api/v1/profile`) and shows the new version, or every path tailor-api refused with its message; **Upload JSON file** puts a file in the editor (saved only by Save); **Download JSON** saves what is in the editor. Before the first save the editor holds `{}`, which saves as a profile with every section empty. The structure: tailor-api's README, "Profile".
 
 ## Request limits and time budgets
 
@@ -155,7 +173,9 @@ The specs create the applications they need through the API and read expected va
 | `API_URL` | `http://localhost:4000` | at startup |
 | `API_REQUEST_TIMEOUT_MS` | `10000` | at startup; every API call (server-side and the `/api` proxy) |
 | `API_BODY_TIMEOUT_MS` | `10000` | at startup; reading a body the `/api` proxy forwards |
-| `API_READ_ONLY` | `false` | at startup; `true`: the `/api` proxy forwards only `GET` and `HEAD` (prod until sign-in) |
+| `ID_URL` | none | at startup; id-web's public origin (`https://id.nick-lukashik.com`): "Sign in" links to `${ID_URL}/login?continue=<page>` |
+| `ID_API_URL` | none | at startup; id-api in the cluster (`http://id-api.prod.svc`): refresh, `me`, sign-out |
+| `SESSION_SECRET` | none | at startup; key of the shared session cookie, 32+ characters, the same on every site under the domain (secret `web-session`). Without all three: no accounts (local work with the mock) |
 | `CV_URL` | `http://localhost:4000/api/v1/cv` | at startup; base of the public CV links, `${CV_URL}/<application id>` (tailor-api redirects to `<id>/<Name-Role-CV>.pdf`) (prod: `https://cv.<domain>`) |
 | `SITE_URL` | `http://localhost:3000` | at startup |
 | `APP_VERSION` | `dev` | at startup (`x-app-version` header) |
@@ -186,7 +206,7 @@ Versions are pinned exactly. [Renovate](https://docs.renovatebot.com/) (`renovat
 
 `.github/workflows/ci.yml` calls the org reusable workflows from `nick-lukashik/.github` by the moving major tag `@v1`:
 
-- job `ci`: `build.yml@v1` with `kind: web`. It runs `pnpm verify`, then `pnpm test:e2e` on that same build (the mock API, plus servers of the same build with `ROBOTS=noindex` and `API_READ_ONLY=true`, and one whose API is down), then builds the image; on `master` it pushes it to GHCR. The required check is `ci / verify`.
+- job `ci`: `build.yml@v1` with `kind: web`. It runs `pnpm verify`, then `pnpm test:e2e` on that same build (the mock API, plus servers of the same build with `ROBOTS=noindex`, one whose API is down, and one with accounts on against `e2e/mock-id.mjs`), then builds the image; on `master` it pushes it to GHCR. The required check is `ci / verify`.
 - job `deploy`: on `master`, when an image was pushed: `deploy-pr.yml@v1` opens the gitops PR with the new digest; the owner's merge is the deploy.
 
 ## Deploy
@@ -194,10 +214,11 @@ Versions are pinned exactly. [Renovate](https://docs.renovatebot.com/) (`renovat
 The image follows the [service runtime contract](https://github.com/nick-lukashik/.github/blob/master/docs/service-contract.md) (kind **web**).
 
 - gitops `apps/tailor-web/prod`: `components/service`, `components/web`, `components/subdomain` (`tailor`), the image by digest.
-- ConfigMap `tailor-web-config`: `API_URL=http://tailor-api.prod.svc`, `SITE_URL` and `CV_URL` derived from the hosts (`https://tailor.<domain>`, `https://cv.<domain>`), `API_READ_ONLY=true`, `ROBOTS=noindex`. tailor-api lists tailor-web as its caller in its own folder.
+- ConfigMap `tailor-web-config`: `API_URL=http://tailor-api.prod.svc`, `SITE_URL` and `CV_URL` derived from the hosts (`https://tailor.<domain>`, `https://cv.<domain>`), `ID_URL`, `ID_API_URL`, `ROBOTS=noindex`; `SESSION_SECRET` from the SealedSecret `web-session` (`components/web`); egress to id-api (`api-client`). id-web must list `https://tailor.<domain>` in `FORM_ACTION_ORIGINS`, or "Sign in" does not come back here. tailor-api lists tailor-web as its caller in its own folder.
 - Probes: `/health/live` and `/health/ready` (reports the API, does not require it). Both return `x-app-version`, which the post-deploy smoke check waits for.
 
 ## Limitations
 
 - One OG image, in English: link previews arrive without the locale cookie.
 - `openapi-typescript` 7 does not work with TypeScript 7 (no JS API), so `pnpm api:types` runs it through `pnpm dlx` with TypeScript 5.9; the versions are pinned in `scripts/api-types.mjs`.
+- The `real-api` project starts its site without accounts, and tailor-api now answers 401 to a call without an id-api token, so those specs fail against a real API until the run gets a real id (or a stand-in that signs ES256 tokens).

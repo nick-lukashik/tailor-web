@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { applicationsApi } from './applications'
 import { createApiClient } from './client'
-import { type ApiError, fieldOf, isApiError } from './errors'
+import { type ApiError, fieldOf, isApiError, pathOf, toApiError } from './errors'
 
 const json = (status: number, body: unknown, headers: Record<string, string> = {}) =>
     new Response(JSON.stringify(body), {
@@ -231,5 +231,64 @@ describe('fieldOf', () => {
         ],
     ])('%j → %s', (path, field) => {
         expect(fieldOf(path)).toBe(field)
+    })
+})
+
+describe('pathOf', () => {
+    it.each([
+        [
+            'cases.0.employmentId',
+            'cases.0.employmentId',
+        ],
+        [
+            [
+                'person',
+                'links',
+                0,
+                'url',
+            ],
+            'person.links.0.url',
+        ],
+        [
+            '',
+            '',
+        ],
+        [
+            undefined,
+            '',
+        ],
+    ])('%j → %s', (path, whole) => {
+        expect(pathOf(path)).toBe(whole)
+    })
+
+    it('keeps the whole path of each detail, and the access codes of tailor-api', () => {
+        const error = toApiError(400, {
+            code: 'VALIDATION_FAILED',
+            message: 'Request validation failed',
+            details: [
+                {
+                    path: 'cases.3.projectId',
+                    message: 'no project',
+                },
+            ],
+            requestId: 'r',
+        })
+        expect(error.details).toEqual([
+            {
+                path: 'cases.3.projectId',
+                message: 'no project',
+            },
+        ])
+        expect(error.fieldErrors()).toEqual({
+            cases: 'no project',
+        })
+        expect(
+            toApiError(403, {
+                code: 'NOT_INVITED',
+                message: 'Tailor is by invitation',
+                requestId: 'r',
+            }).code,
+        ).toBe('NOT_INVITED')
+        expect(toApiError(401, undefined).code).toBe('UNAUTHORIZED')
     })
 })

@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/api/v1/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The caller: user id and whether Tailor is open to them */
+        get: operations["MeController_me_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/applications": {
         parameters: {
             query?: never;
@@ -11,7 +28,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Newest applications first, cursor pagination */
+        /** The caller's applications, newest first, cursor pagination */
         get: operations["ApplicationsController_list_v1"];
         put?: never;
         post: operations["ApplicationsController_create_v1"];
@@ -37,10 +54,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The profile document and its version; 404 before the first save */
+        get: operations["ProfileController_get_v1"];
+        /** Replace the whole document: version + 1 and a snapshot. `{}` is an empty profile */
+        put: operations["ProfileController_save_v1"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/profile/schema": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** JSON Schema (draft 2020-12) of the document PUT accepts, for editors */
+        get: operations["ProfileController_schema_v1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        Me: {
+            /** Format: uuid */
+            userId: string;
+            invited: boolean;
+        };
+        Error: {
+            /** @enum {string} */
+            code: "VALIDATION_FAILED" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_INVITED" | "NOT_FOUND" | "PAYLOAD_TOO_LARGE" | "RATE_LIMITED" | "INTERNAL" | "UNAVAILABLE" | "TIMEOUT";
+            message: string;
+            details?: {
+                path: string;
+                message: string;
+            }[];
+            requestId: string;
+        };
         ApplicationList: {
             items: components["schemas"]["Application"][];
             nextCursor: string | null;
@@ -57,16 +124,6 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
         };
-        Error: {
-            /** @enum {string} */
-            code: "VALIDATION_FAILED" | "NOT_FOUND" | "PAYLOAD_TOO_LARGE" | "RATE_LIMITED" | "INTERNAL" | "UNAVAILABLE" | "TIMEOUT";
-            message: string;
-            details?: {
-                path: string;
-                message: string;
-            }[];
-            requestId: string;
-        };
         CreateApplication: {
             company: string;
             /** @default  */
@@ -75,6 +132,382 @@ export interface components {
             vacancyUrl?: string;
             /** @default  */
             vacancyText: string;
+        };
+        Profile: {
+            version: number;
+            /** Format: date-time */
+            updatedAt: string;
+            document: components["schemas"]["ProfileDocument"];
+        };
+        ProfileDocument: {
+            /** @default {} */
+            person: components["schemas"]["ProfilePerson"];
+            /** @default {} */
+            career: components["schemas"]["ProfileCareer"];
+            employments?: components["schemas"]["ProfileEmployments"];
+            cases?: components["schemas"]["ProfileCases"];
+            skills?: components["schemas"]["ProfileSkills"];
+            /** @default {} */
+            education: components["schemas"]["ProfileEducation"];
+            languages?: components["schemas"]["ProfileLanguages"];
+            summary?: components["schemas"]["ProfileSummary"];
+            /** @default {} */
+            story: components["schemas"]["ProfileStory"];
+            /** @default {} */
+            applicationFacts: components["schemas"]["ProfileApplicationFacts"];
+            answers?: components["schemas"]["ProfileAnswers"];
+            /** @default {} */
+            voice: components["schemas"]["ProfileVoice"];
+            /** @default {} */
+            settings: components["schemas"]["ProfileSettings"];
+        };
+        ProfilePerson: {
+            /** @default [] */
+            names: {
+                /** @enum {string} */
+                locale: "en" | "ru";
+                firstName: string;
+                /** @default  */
+                lastName: string;
+            }[];
+            /** @default [] */
+            signatures: {
+                /** @enum {string} */
+                locale: "en" | "ru";
+                text: string;
+            }[];
+            /** Format: email */
+            email?: string;
+            phone?: {
+                display: string;
+                e164: string;
+            };
+            telegram?: string;
+            /** @default {} */
+            location: {
+                /** @default  */
+                city: string;
+                /** @default  */
+                country: string;
+                /** @default  */
+                timezone: string;
+            };
+            /** @default [] */
+            links: {
+                /** @enum {string} */
+                kind: "linkedin" | "github" | "website" | "portfolio" | "telegram" | "email" | "other";
+                /** Format: uri */
+                url: string;
+                /** @default  */
+                label: string;
+            }[];
+            /** @default [] */
+            citizenship: string[];
+            /** @default [] */
+            residence: string[];
+        };
+        ProfileCareer: {
+            /** @default  */
+            headline: string;
+            /** @default [] */
+            targetRoles: {
+                /** @enum {string} */
+                role: "fullstack" | "frontend" | "backend" | "ai_engineer" | "platform" | "devops" | "mobile" | "data" | "qa" | "engineering_manager";
+                headline: string;
+            }[];
+            /** @default  */
+            stackLine: string;
+            careerStartYear?: number;
+            /** @enum {string} */
+            seniority?: "junior" | "middle" | "senior" | "staff" | "principal" | "lead";
+        };
+        /** @default [] */
+        ProfileEmployments: {
+            id: string;
+            /**
+             * @default job
+             * @enum {string}
+             */
+            kind: "job" | "side_projects";
+            company: {
+                name: string;
+                /** Format: uri */
+                website?: string;
+                /** @default  */
+                domain: string;
+                /** @default  */
+                industry: string;
+                /** @default  */
+                size: string;
+                /** @default  */
+                description: string;
+            };
+            title: string;
+            start: string;
+            /** @default null */
+            end: string | null;
+            /** @default  */
+            location: string;
+            /** @enum {string} */
+            format?: "remote" | "hybrid" | "office";
+            /** @default 0 */
+            order: number;
+            quota?: {
+                general: {
+                    min: number;
+                    target: number;
+                };
+                ai: {
+                    min: number;
+                    target: number;
+                };
+            };
+            /** @default false */
+            aiOnly: boolean;
+            /** @default [] */
+            fixedBullets: string[];
+            /** @default [] */
+            projects: {
+                id: string;
+                name: string;
+                /** @default  */
+                description: string;
+            }[];
+        }[];
+        /** @default [] */
+        ProfileCases: {
+            id: string;
+            employmentId: string;
+            /** @default null */
+            projectId: string | null;
+            title: string;
+            /** @default  */
+            primaryTheme: string;
+            /** @default [] */
+            secondaryThemes: string[];
+            /** @default  */
+            achievementGroup: string;
+            /** @default [] */
+            technologies: string[];
+            /** @default [] */
+            capabilities: {
+                id: string;
+                name: string;
+            }[];
+            /** @default [] */
+            keyClaims: {
+                id: string;
+                text: string;
+            }[];
+            /** @default [] */
+            metricClaims: {
+                id: string;
+                text: string;
+            }[];
+            variants: {
+                full: string;
+                compact: string;
+                minimal: string;
+            };
+            /** @default {} */
+            categoryRatings: {
+                /** @default 0 */
+                FE: number;
+                /** @default 0 */
+                BE: number;
+                /** @default 0 */
+                AR: number;
+                /** @default 0 */
+                RE: number;
+                /** @default 0 */
+                PF: number;
+                /** @default 0 */
+                QA: number;
+                /** @default 0 */
+                SE: number;
+                /** @default 0 */
+                OW: number;
+                /** @default 0 */
+                EE: number;
+                /** @default 0 */
+                CO: number;
+                /** @default 0 */
+                UX: number;
+                /** @default 0 */
+                AI: number;
+            };
+            /** @default [] */
+            whenVacancyMentions: string[];
+            /** @default true */
+            active: boolean;
+        }[];
+        /** @default [] */
+        ProfileSkills: {
+            label: string;
+            /** @default [] */
+            items: {
+                name: string;
+                /** @default [] */
+                aliases: string[];
+                /** @default false */
+                core: boolean;
+            }[];
+        }[];
+        ProfileEducation: {
+            /** @default [] */
+            degrees: {
+                institution: string;
+                /** @default  */
+                degree: string;
+                /** @default  */
+                field: string;
+                start?: string;
+                end?: string;
+            }[];
+            /** @default [] */
+            certificates: {
+                name: string;
+                /** @default  */
+                issuer: string;
+                year?: number;
+                /** Format: uri */
+                url?: string;
+            }[];
+        };
+        /** @default [] */
+        ProfileLanguages: {
+            code: string;
+            name: string;
+            /** @enum {string} */
+            level: "native" | "c2" | "c1" | "b2" | "b1" | "a2" | "a1" | "none";
+            /** @default  */
+            note: string;
+        }[];
+        /** @default [] */
+        ProfileSummary: {
+            id: string;
+            /** @default  */
+            full: string;
+            /** @default  */
+            compact: string;
+        }[];
+        ProfileStory: {
+            /** @default  */
+            aboutMe: string;
+            /** @default [] */
+            careerPath: string[];
+            /** @default [] */
+            personal: {
+                id: string;
+                text: string;
+                /** @default [] */
+                tags: string[];
+            }[];
+            /** @default  */
+            motivation: string;
+        };
+        ProfileApplicationFacts: {
+            /** @default {} */
+            workAuthorization: {
+                needsSponsorship?: boolean;
+                /** @default [] */
+                byCountry: {
+                    country: string;
+                    authorized: boolean;
+                    /** @default false */
+                    needsVisa: boolean;
+                }[];
+            };
+            /** @default {} */
+            relocation: {
+                willing?: boolean;
+                /** @default [] */
+                destinations: string[];
+            };
+            /** @default [] */
+            workFormats: ("remote" | "hybrid" | "office")[];
+            /** @default [] */
+            salary: {
+                amount: number;
+                currency: string;
+                /** @enum {string} */
+                period: "hour" | "month" | "year";
+                /** @enum {string} */
+                basis?: "gross" | "net";
+                /** @default  */
+                contract: string;
+            }[];
+            noticePeriodWeeks?: number;
+            /** @default  */
+            contract: string;
+            /** @default  */
+            usTaxForm: string;
+            /** Format: date */
+            availableFrom?: string;
+            /**
+             * @default prefer_not_to_say
+             * @enum {string}
+             */
+            eeo: "prefer_not_to_say";
+        };
+        /** @default [] */
+        ProfileAnswers: {
+            id: string;
+            questionClass: string;
+            /** @enum {string} */
+            locale: "en" | "ru";
+            text: string;
+            /** @default  */
+            short: string;
+            /** @default [] */
+            tags: string[];
+        }[];
+        ProfileVoice: {
+            /** @default [] */
+            rules: string[];
+            /** @default [] */
+            stopPhrases: string[];
+            /** @default [] */
+            templates: {
+                id: string;
+                /** @enum {string} */
+                channel: "telegram" | "email" | "linkedin";
+                /** @enum {string} */
+                locale: "en" | "ru";
+                /** @default  */
+                subject: string;
+                text: string;
+            }[];
+            /** @default [] */
+            samples: {
+                /** @enum {string} */
+                locale: "en" | "ru";
+                text: string;
+            }[];
+        };
+        ProfileSettings: {
+            /** @default 2 */
+            maxPages: number;
+            /** @default minimal-violet */
+            template: string;
+            /** @default  */
+            font: string;
+            /**
+             * @default en
+             * @enum {string}
+             */
+            cvLocale: "en";
+            /**
+             * @default strict
+             * @enum {string}
+             */
+            factsMode: "strict" | "free";
+        };
+        SavedProfile: {
+            version: number;
+            sha256: string;
+            /** Format: date-time */
+            updatedAt: string;
         };
     };
     responses: never;
@@ -85,6 +518,61 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    MeController_me_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Me"];
+                };
+            };
+            /** @description No valid access token (UNAUTHORIZED) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Internal error (INTERNAL) */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Database over its time budget or unavailable, retry later (UNAVAILABLE) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Request over its 10 s budget (TIMEOUT) */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
     ApplicationsController_list_v1: {
         parameters: {
             query?: {
@@ -110,6 +598,24 @@ export interface operations {
             };
             /** @description Validation failed (VALIDATION_FAILED) */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid access token (UNAUTHORIZED) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not on the allowlist of Tailor (NOT_INVITED) */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -179,6 +685,24 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            /** @description No valid access token (UNAUTHORIZED) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not on the allowlist of Tailor (NOT_INVITED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description Request body over 1 MiB (PAYLOAD_TOO_LARGE) */
             413: {
                 headers: {
@@ -239,8 +763,241 @@ export interface operations {
                     "application/json": components["schemas"]["Application"];
                 };
             };
+            /** @description No valid access token (UNAUTHORIZED) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not on the allowlist of Tailor (NOT_INVITED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             /** @description Not found (NOT_FOUND) */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Internal error (INTERNAL) */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Database over its time budget or unavailable, retry later (UNAVAILABLE) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Request over its 10 s budget (TIMEOUT) */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    ProfileController_get_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Profile"];
+                };
+            };
+            /** @description No valid access token (UNAUTHORIZED) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not on the allowlist of Tailor (NOT_INVITED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not found (NOT_FOUND) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Internal error (INTERNAL) */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Database over its time budget or unavailable, retry later (UNAVAILABLE) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Request over its 10 s budget (TIMEOUT) */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    ProfileController_save_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileDocument"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedProfile"];
+                };
+            };
+            /** @description Validation failed (VALIDATION_FAILED) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid access token (UNAUTHORIZED) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not on the allowlist of Tailor (NOT_INVITED) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Request body over 1 MiB (PAYLOAD_TOO_LARGE) */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Internal error (INTERNAL) */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Database over its time budget or unavailable, retry later (UNAVAILABLE) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Request over its 10 s budget (TIMEOUT) */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    ProfileController_schema_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No valid access token (UNAUTHORIZED) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not on the allowlist of Tailor (NOT_INVITED) */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -9,9 +9,13 @@ export const NOINDEX_PORT = 3101
 export const API_DOWN_PORT = 3102
 /** The same build against a real API (E2E_API_URL), project real-api. */
 export const REAL_API_SITE_PORT = 3103
+/** The same build with accounts on, reading the cookie of e2e/mock-id.mjs. */
+export const SSO_PORT = 3104
 export const MOCK_API_PORT = 4010
 /** Nothing listens here: the API of the API_DOWN_PORT site. */
 export const DEAD_API_PORT = 4011
+/** e2e/mock-id.mjs: id-web's /login and the id-api calls of the SSO_PORT site. */
+export const ID_PORT = 4012
 
 /**
  * The /api proxy's budgets on the SITE_PORT server: shorter than the 10 s

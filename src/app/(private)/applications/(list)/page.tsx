@@ -4,6 +4,7 @@ import { getTranslations } from 'next-intl/server'
 import { applicationQueries } from '@/lib/api/applications'
 import { serverApi } from '@/lib/api/server'
 import { getServerQueryClient } from '@/lib/query/server'
+import { mayEnter, requestAccess } from '@/lib/session/access'
 import { ApplicationsList } from '../_components/applications-list'
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -17,11 +18,13 @@ export async function generateMetadata(): Promise<Metadata> {
 const ignore = () => {}
 
 /**
+ * The person's own applications (tailor-api filters by the token).
  * Server prefetch → HydrationBoundary → client query. The first page is in
  * the HTML; the client takes the same cache over without refetching. A
  * failed prefetch is not fatal: the list retries and shows its error state.
  */
 export default async function ApplicationsPage() {
+    if (!mayEnter(await requestAccess())) return null
     const [t, api] = await Promise.all([
         getTranslations('applications'),
         serverApi(),

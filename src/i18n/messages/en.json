@@ -10,7 +10,12 @@
         "label": "Main",
         "home": "Home",
         "applications": "Applications",
-        "language": "Language"
+        "language": "Language",
+        "profile": "Profile",
+        "signIn": "Sign in",
+        "account": "Account",
+        "signOut": "Sign out",
+        "signedInAs": "Signed in as {name}"
     },
     "footer": {
         "version": "Version {version}",
@@ -86,5 +91,47 @@
         "text": "We count visits with Google Analytics. It sets cookies and sends Google data about your visit.",
         "more": "Privacy policy",
         "ok": "OK"
+    },
+    "access": {
+        "signIn": {
+            "title": "Sign in to Tailor",
+            "body": "Your applications and your profile are private. Sign in with your account to see them.",
+            "action": "Sign in"
+        },
+        "invite": {
+            "title": "Tailor is by invitation",
+            "body": "You are signed in, but Tailor is not open to this account yet. Send this user ID to the owner to be invited:",
+            "idLabel": "Your user ID",
+            "copy": "Copy",
+            "copied": "Copied"
+        }
+    },
+    "profileEditor": {
+        "meta": {
+            "title": "Profile",
+            "description": "The data your CVs, letters and answers are built from."
+        },
+        "heading": "Profile",
+        "lead": "Everything your CVs, letters and answers are built from, as one JSON document. Edit it here, or upload a file, and save.",
+        "label": "Profile (JSON)",
+        "empty": "No profile yet. Upload a JSON file, or save '{}' to start from empty sections.",
+        "version": "Version {version}",
+        "save": "Save",
+        "saving": "Saving…",
+        "saved": "Saved: version {version}",
+        "upload": "Upload JSON file",
+        "download": "Download JSON",
+        "loaded": "Loaded {name}. Save to keep it.",
+        "invalidJson": "This is not valid JSON: {message}",
+        "rejected": "The profile was not saved. Fix these and save again:",
+        "documentPath": "(document)",
+        "tooLarge": "The profile is larger than 1 MiB.",
+        "failed": "The profile could not be saved. Try again in a minute.",
+        "loadFailed": "The profile could not be loaded. Reload the page to try again."
+    },
+    "authError": {
+        "title": "Sign-out did not work",
+        "body": "The account site is not answering right now, so you are still signed in. Try again in a minute.",
+        "back": "Back to the main page"
     }
 }

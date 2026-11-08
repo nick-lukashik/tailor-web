@@ -5,22 +5,31 @@ import { serverEnv } from '@/lib/env/server'
 import { visitorHeaders } from '@/lib/http/forwarded-headers'
 import { logger } from '@/lib/logger'
 import { REQUEST_ID_HEADER } from '@/lib/request-id'
+import { requestSession } from '@/lib/session/request'
 import { createApiClient } from './client'
 
 /**
- * The server's client for Server Components, generateMetadata and route
- * handlers: API_URL directly, the page's request id and the visitor headers
- * of the allow-list forwarded (never cookies or identity headers), every
- * call logged. One per request (React cache).
+ * The server's client for Server Components and generateMetadata: API_URL
+ * directly, the page's request id, the visitor headers of the allow-list and
+ * the person's access token from the session (never the browser's cookies or
+ * identity headers), every call logged. One per request (React cache).
  */
 export const serverApi = cache(async () => {
-    const incoming = await headers()
+    const [incoming, session] = await Promise.all([
+        headers(),
+        requestSession(),
+    ])
     const requestId = incoming.get(REQUEST_ID_HEADER) ?? undefined
     const forwarded = {
         ...visitorHeaders(incoming),
         ...(requestId
             ? {
                   [REQUEST_ID_HEADER]: requestId,
+              }
+            : {}),
+        ...(session
+            ? {
+                  authorization: `Bearer ${session.accessToken}`,
               }
             : {}),
     }

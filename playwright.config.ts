@@ -4,21 +4,26 @@ import {
     API_DOWN_PORT,
     BODY_TIMEOUT_MS,
     DEAD_API_PORT,
+    ID_PORT,
     MOCK_API_PORT,
     NOINDEX_PORT,
     REAL_API_SITE_PORT,
     SITE_PORT,
+    SSO_PORT,
     UPSTREAM_TIMEOUT_MS,
 } from './e2e/servers'
 
 // The suite runs against the production build (`pnpm build` first) and the
-// mock API, both started below. PW_BASE_URL points it at a running site
+// mock API, both started below: without accounts (as local work), and once
+// with accounts on against e2e/mock-id.mjs (as prod). PW_BASE_URL points it at a running site
 // instead (then the mock API is yours to start, see e2e/fixtures.ts).
 // E2E_API_URL adds a server of the same build against that real API, for the
 // real-api project (`pnpm test:e2e:real`, README).
 const external = process.env.PW_BASE_URL
 const realApi = process.env.E2E_API_URL
 const baseURL = external ?? `http://127.0.0.1:${SITE_PORT}`
+// Test only: the sealed cookie of this run, shared by the mock account site and the SSO site.
+const SESSION_SECRET = 'e2e-site-session-secret-0123456789abcdef'
 const site = (port: number, env: Record<string, string>) => ({
     // The same server.js the container runs.
     command: 'node scripts/start-standalone.mjs',
@@ -107,7 +112,22 @@ export default defineConfig<BackendOptions>({
               site(NOINDEX_PORT, {
                   ROBOTS: 'noindex',
                   GTM_ID: 'GTM-E2ETEST',
-                  API_READ_ONLY: 'true',
+              }),
+              {
+                  command: 'node e2e/mock-id.mjs',
+                  url: `http://127.0.0.1:${ID_PORT}/health`,
+                  env: {
+                      PORT: String(ID_PORT),
+                      SESSION_SECRET,
+                  },
+                  reuseExistingServer: false,
+                  timeout: 30_000,
+              },
+              // As prod: accounts on, so the pages need a session and /api sends its token.
+              site(SSO_PORT, {
+                  ID_URL: `http://127.0.0.1:${ID_PORT}`,
+                  ID_API_URL: `http://127.0.0.1:${ID_PORT}`,
+                  SESSION_SECRET,
               }),
               site(API_DOWN_PORT, {
                   API_URL: `http://127.0.0.1:${DEAD_API_PORT}`,
