@@ -60,7 +60,7 @@ Partial Prefetching skills do not fit this project (nonce CSP, see below).
 - Env: read `process.env` only in `src/lib/env/` (exceptions: `src/proxy.ts` and `src/instrumentation.ts` read
   `APP_VERSION`, `NODE_ENV`, `NEXT_RUNTIME`, because `server-only` modules cannot load there). Next inlines
   `NEXT_PUBLIC_*` at build time, and only for literal `process.env.NEXT_PUBLIC_X` accesses. The project has none:
-  environment-specific values (`API_URL`, `SITE_URL`, `ROBOTS`) are server env read at runtime, so one image
+  environment-specific values (`API_URL`, `SITE_URL`, `HOME_URL`) are server env read at runtime, so one image
   serves stage and prod.
 - Metadata: a page exports only `title` and `description` (`generateMetadata` with `getTranslations`). The root
   layout derives canonical, hreflang alternates and `og:url` from the `x-pathname` header the proxy sets, and

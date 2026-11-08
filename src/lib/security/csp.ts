@@ -8,6 +8,8 @@ export type CspOptions = {
     https?: boolean
     /** Google Tag Manager is on (GTM_ID): Google Analytics may receive what it sends. */
     analytics?: boolean
+    /** Other origins a form of this site may end on (browsers check form-action on every redirect). */
+    formTargets?: string[]
 }
 
 /** Where Tag Manager and Google Analytics send data. Their scripts need no entry: `'strict-dynamic'`. */
@@ -43,7 +45,13 @@ export function createNonce(): string {
  * hosts are added with GTM_ID). Dev
  * relaxes styles because the dev overlay injects them without a nonce.
  */
-export function buildCsp({ nonce, dev = false, https = false, analytics = false }: CspOptions): string {
+export function buildCsp({
+    nonce,
+    dev = false,
+    https = false,
+    analytics = false,
+    formTargets = [],
+}: CspOptions): string {
     const directives: Record<string, string[]> = {
         'default-src': [
             "'self'",
@@ -106,6 +114,7 @@ export function buildCsp({ nonce, dev = false, https = false, analytics = false 
         ],
         'form-action': [
             "'self'",
+            ...formTargets,
         ],
         'frame-ancestors': [
             "'none'",

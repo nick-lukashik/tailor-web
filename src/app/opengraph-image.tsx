@@ -10,7 +10,7 @@ export const contentType = 'image/png'
 
 /**
  * Share card for every page (Next.js also uses it for twitter:image), drawn
- * once at build time. Link previews send no locale cookie, so it is English.
+ * once at build time: the site's name only, nothing about what it is for.
  */
 export default function OpengraphImage() {
     return new ImageResponse(
@@ -20,7 +20,7 @@ export default function OpengraphImage() {
                 height: '100%',
                 display: 'flex',
                 flexDirection: 'column',
-                justifyContent: 'space-between',
+                justifyContent: 'center',
                 padding: 80,
                 // The site's palette (globals.css): background, foreground, primary, muted text.
                 background: '#ffffff',
@@ -57,31 +57,6 @@ export default function OpengraphImage() {
                     }}
                 >
                     {en.meta.siteName}
-                </div>
-            </div>
-            <div
-                style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 24,
-                }}
-            >
-                <div
-                    style={{
-                        fontSize: 72,
-                        fontWeight: 700,
-                        lineHeight: 1.05,
-                    }}
-                >
-                    A CV and a cover letter for each vacancy
-                </div>
-                <div
-                    style={{
-                        fontSize: 32,
-                        color: '#737373',
-                    }}
-                >
-                    Two-page CV · cover letter · one board for every application
                 </div>
             </div>
         </div>,

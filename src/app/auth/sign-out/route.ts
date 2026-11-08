@@ -4,7 +4,7 @@ import { accounts, cookieName, endSession, expiredSessionCookie, openSession } f
 
 export const dynamic = 'force-dynamic'
 
-/** A redirect to a path of this site (303: the next request is a GET). Never stored by a cache. */
+/** A redirect to a path of this site or to the landing (303: the next request is a GET). Never stored by a cache. */
 function to(path: string) {
     const response = NextResponse.redirect(new URL(path, serverEnv.SITE_URL), 303)
     response.headers.set('cache-control', 'private, no-store')
@@ -33,7 +33,8 @@ export async function POST(request: NextRequest) {
     const name = cookieName()
     const session = openSession(accounts, request.cookies.get(name)?.value)
     if (session && !(await endSession(accounts, session))) return to('/auth/error')
-    const response = to('/')
+    // Signed out, nothing here is for this person any more: straight to the landing.
+    const response = to(serverEnv.HOME_URL)
     response.cookies.set(name, '', expiredSessionCookie())
     return response
 }

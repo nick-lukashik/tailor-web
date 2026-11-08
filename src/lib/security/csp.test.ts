@@ -68,6 +68,28 @@ describe('buildCsp', () => {
         expect(directive(csp, 'connect-src')).toBe("'self' ws: wss:")
     })
 
+    it('lets a form end on the given origins, and only there', () => {
+        expect(
+            directive(
+                buildCsp({
+                    nonce: 'n',
+                    formTargets: [
+                        'https://example.com',
+                    ],
+                }),
+                'form-action',
+            ),
+        ).toBe("'self' https://example.com")
+        expect(
+            directive(
+                buildCsp({
+                    nonce: 'n',
+                }),
+                'form-action',
+            ),
+        ).toBe("'self'")
+    })
+
     it('upgrades insecure requests behind TLS', () => {
         expect(
             buildCsp({

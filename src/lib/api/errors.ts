@@ -3,9 +3,8 @@ export const contractErrorCodes = [
     'VALIDATION_FAILED',
     /** No valid access token: sign in (again). */
     'UNAUTHORIZED',
+    /** Signed in, but the token lacks the `tailor` role (or a cross-site write). */
     'FORBIDDEN',
-    /** Signed in, but not on tailor-api's allowlist: Tailor is by invitation. */
-    'NOT_INVITED',
     'NOT_FOUND',
     'RATE_LIMITED',
     'INTERNAL',

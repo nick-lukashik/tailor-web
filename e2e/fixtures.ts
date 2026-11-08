@@ -2,7 +2,7 @@ import { type APIRequestContext, test as base, expect } from '@playwright/test'
 import en from '../src/i18n/messages/en.json' with { type: 'json' }
 import ru from '../src/i18n/messages/ru.json' with { type: 'json' }
 import { type Application, type ApplicationPage } from '../src/lib/api/types'
-import { API_DOWN_PORT, MOCK_API_PORT, NOINDEX_PORT } from './servers'
+import { API_DOWN_PORT, GTM_PORT, MOCK_API_PORT } from './servers'
 
 /** UI strings come from the catalogs, so a copy change does not break tests. */
 export { en, ru }
@@ -15,10 +15,10 @@ export const API_URL = process.env.PW_API_URL ?? `http://127.0.0.1:${MOCK_API_PO
 export const REAL_API_URL = process.env.E2E_API_URL
 
 /**
- * The same build started with ROBOTS=noindex (playwright.config.ts). Against
- * PW_BASE_URL it is set only by PW_NOINDEX_URL; without it those tests skip.
+ * The same build started with GTM_ID (playwright.config.ts). Against
+ * PW_BASE_URL it is set only by PW_GTM_URL; without it those tests skip.
  */
-export const NOINDEX_URL = process.env.PW_NOINDEX_URL ?? (external ? undefined : `http://127.0.0.1:${NOINDEX_PORT}`)
+export const GTM_URL = process.env.PW_GTM_URL ?? (external ? undefined : `http://127.0.0.1:${GTM_PORT}`)
 /** The same build with an API that does not answer; only with the bundled servers. */
 export const API_DOWN_URL = external ? undefined : `http://127.0.0.1:${API_DOWN_PORT}`
 

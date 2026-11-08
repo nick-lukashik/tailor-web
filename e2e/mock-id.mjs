@@ -5,9 +5,11 @@
 // not care about ports, so the one it sets reaches the site as it would across
 // subdomains. Emails starting with `short-` get 30 s tokens (under the site's 60 s
 // refresh margin), `down-` a 503 from me, `fail-` a 503 from logout, `named-` a
-// name, `guest-` a user id e2e/mock-api/server.ts does not invite. Access tokens are
-// `at.<user id>.<random>`, which the mock API reads as that user. /test/* lets a test look.
-// (landing-web's mock, with user ids in the tokens.)
+// name, `guest-` no `tailor` role. Access tokens are shaped like id-api's JWTs but not
+// signed: `<header>.<payload>.<random>`, the payload `{ sub, sid, roles, exp }`; the site
+// reads `roles`, the mock API `sub` and `roles`. /landing stands for the platform's
+// landing (HOME_URL of the site). /test/* lets a test look.
+// (landing-web's mock, with user ids and roles in the tokens.)
 import { createCipheriv, createHash, randomBytes, randomUUID } from 'node:crypto'
 import { createServer } from 'node:http'
 
@@ -32,16 +34,39 @@ function seal(value) {
     ]).toString('base64url')
 }
 
-/** A stable user id per email, as a uuid; `guest-` ones start with ffffffff. */
+/** A stable user id per email, as a uuid. */
 function userIdOf(email) {
     const hex = createHash('sha256').update(email).digest('hex')
-    const id = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-7${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`
-    return email.startsWith('guest-') ? `ffffffff${id.slice(8)}` : id
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-7${hex.slice(13, 16)}-8${hex.slice(17, 20)}-${hex.slice(20, 32)}`
+}
+
+const part = value => Buffer.from(JSON.stringify(value)).toString('base64url')
+
+/** What id-api would put in the token: the `tailor` role for everyone but `guest-`. */
+function accessTokenOf(email, sessionId, expiresAt) {
+    return [
+        part({
+            alg: 'none',
+            typ: 'at+jwt',
+        }),
+        part({
+            sub: userIdOf(email),
+            sid: sessionId,
+            roles: email.startsWith('guest-')
+                ? []
+                : [
+                      'tailor',
+                  ],
+            exp: Math.floor(expiresAt / 1000),
+        }),
+        randomBytes(12).toString('base64url'),
+    ].join('.')
 }
 
 function issue(sessionId) {
     const session = sessions.get(sessionId)
-    const accessToken = `at.${userIdOf(session.email)}.${randomBytes(12).toString('base64url')}`
+    const expiresAt = Date.now() + (session.email.startsWith('short-') ? 30_000 : 300_000)
+    const accessToken = accessTokenOf(session.email, sessionId, expiresAt)
     session.refreshToken = `${sessionId}.${randomBytes(24).toString('base64url')}`
     tokens.set(accessToken, sessionId)
     session.issued = [
@@ -50,7 +75,7 @@ function issue(sessionId) {
     ]
     return {
         accessToken,
-        accessExpiresAt: new Date(Date.now() + (session.email.startsWith('short-') ? 30_000 : 300_000)).toISOString(),
+        accessExpiresAt: new Date(expiresAt).toISOString(),
         refreshToken: session.refreshToken,
         sessionId,
     }
@@ -74,6 +99,13 @@ createServer(async (request, response) => {
         return json(response, 200, {
             status: 'ok',
         })
+    // The platform's landing, as far as the tests care: where the site sends anyone without access.
+    if (url.pathname === '/landing') {
+        response.writeHead(200, {
+            'content-type': 'text/html',
+        })
+        return response.end('<!doctype html><title>Landing</title>')
+    }
     if (url.pathname === '/login') {
         const email = decodeURIComponent(/(?:^|;\s*)e2e_email=([^;]+)/.exec(request.headers.cookie ?? '')?.[1] ?? '')
         const sessionId = randomUUID()

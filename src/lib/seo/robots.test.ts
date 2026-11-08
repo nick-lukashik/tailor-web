@@ -3,22 +3,8 @@ import { languageAlternates, localizedPath } from './alternates'
 import { buildRobots } from './robots'
 
 describe('buildRobots', () => {
-    it('allows crawling and points at the sitemap', () => {
-        expect(buildRobots('index', 'https://example.com')).toEqual({
-            rules: {
-                userAgent: '*',
-                allow: '/',
-                disallow: [
-                    '/api/',
-                    '/health/',
-                ],
-            },
-            sitemap: 'https://example.com/sitemap.xml',
-        })
-    })
-
-    it('disallows everything on noindex environments', () => {
-        expect(buildRobots('noindex', 'https://stage.example.com')).toEqual({
+    it('disallows everything and names no sitemap', () => {
+        expect(buildRobots()).toEqual({
             rules: {
                 userAgent: '*',
                 disallow: '/',

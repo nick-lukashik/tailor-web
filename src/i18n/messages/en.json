@@ -2,17 +2,15 @@
     "meta": {
         "siteName": "Tailor",
         "languageName": "English",
-        "description": "Tailor turns a vacancy into a CV and a cover letter made for it, and keeps track of every application.",
-        "ogAlt": "Tailor: a CV and a cover letter for each vacancy"
+        "description": "Tailor, a private workspace.",
+        "ogAlt": "Tailor"
     },
     "nav": {
         "skip": "Skip to content",
         "label": "Main",
-        "home": "Home",
         "applications": "Applications",
         "language": "Language",
         "profile": "Profile",
-        "signIn": "Sign in",
         "account": "Account",
         "signOut": "Sign out",
         "signedInAs": "Signed in as {name}"
@@ -20,21 +18,6 @@
     "footer": {
         "version": "Version {version}",
         "links": "Service links"
-    },
-    "home": {
-        "meta": {
-            "title": "Tailor: a CV and a cover letter for each vacancy",
-            "description": "Paste a vacancy and get a two-page CV and a cover letter written for it. Every application stays on one board until the answer."
-        },
-        "heading": "A CV and a cover letter for each vacancy",
-        "lead": "Paste a link and the text of a vacancy. Tailor picks what matters for it and builds a two-page CV and a cover letter. Every application stays on one board until the answer.",
-        "features": {
-            "input": "A link and the vacancy text are enough to start.",
-            "cv": "A two-page CV with the experience that fits this vacancy.",
-            "letter": "A cover letter and short messages in the same voice.",
-            "board": "One board for every application, from sent to the answer."
-        },
-        "cta": "Open applications"
     },
     "applications": {
         "meta": {
@@ -91,20 +74,6 @@
         "text": "We count visits with Google Analytics. It sets cookies and sends Google data about your visit.",
         "more": "Privacy policy",
         "ok": "OK"
-    },
-    "access": {
-        "signIn": {
-            "title": "Sign in to Tailor",
-            "body": "Your applications and your profile are private. Sign in with your account to see them.",
-            "action": "Sign in"
-        },
-        "invite": {
-            "title": "Tailor is by invitation",
-            "body": "You are signed in, but Tailor is not open to this account yet. Send this user ID to the owner to be invited:",
-            "idLabel": "Your user ID",
-            "copy": "Copy",
-            "copied": "Copied"
-        }
     },
     "profileEditor": {
         "meta": {

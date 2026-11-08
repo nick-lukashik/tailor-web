@@ -1,12 +1,10 @@
-import { type Metadata } from 'next'
+import { type Metadata, type Route } from 'next'
+import { redirect } from 'next/navigation'
 import { type ReactNode } from 'react'
-import { InvitationNotice } from '@/components/access/invitation-notice'
-import { SignInNotice } from '@/components/access/sign-in-notice'
 import { serverEnv } from '@/lib/env/server'
-import { requestAccess } from '@/lib/session/access'
-import { accounts } from '@/lib/session/session'
+import { mayEnter, requestAccess } from '@/lib/session/access'
 
-/** The person's own work, not content: never indexed, never in the sitemap. */
+/** The person's own work, not content: never indexed. */
 export const metadata: Metadata = {
     robots: {
         index: false,
@@ -15,20 +13,14 @@ export const metadata: Metadata = {
 }
 
 /**
- * Every page but the home page needs a signed-in person on tailor-api's allowlist
- * (D-112). Signed out: an offer to sign in, back to this page. Not invited: the
- * invitation page with the person's user id. tailor-api checks the same on every
- * call, so this is what the person sees, not the lock.
+ * Every page needs a signed-in person whose token carries the `tailor` role. src/proxy.ts
+ * sends anyone else to the platform's landing before rendering; this catches what only
+ * tailor-api can tell (a token it refuses, a session ended elsewhere) the same way, with
+ * no message. tailor-api checks the same on every call, so this is what the person sees,
+ * not the lock.
  */
 export default async function PrivateLayout({ children }: { children: ReactNode }) {
-    const access = await requestAccess()
-    if (access.state === 'signed-out' && accounts)
-        return (
-            <SignInNotice
-                accountSite={accounts.idUrl}
-                site={serverEnv.SITE_URL}
-            />
-        )
-    if (access.state === 'not-invited') return <InvitationNotice userId={access.userId} />
+    // An external URL: typed routes know only this site's paths.
+    if (!mayEnter(await requestAccess())) redirect(serverEnv.HOME_URL as Route)
     return children
 }

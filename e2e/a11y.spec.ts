@@ -9,7 +9,6 @@ const WCAG = [
     'wcag22aa',
 ]
 const pages = [
-    '/',
     '/applications',
     '/applications/application-010',
     '/profile',

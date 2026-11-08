@@ -7,26 +7,16 @@ import { requestSession } from './request'
 import { accounts } from './session'
 
 /**
- * Whether this request may see Tailor's private pages:
+ * Whether this request may see Tailor's pages. src/proxy.ts already sent away anyone
+ * without a session or without the `tailor` role in the token; this asks tailor-api,
+ * which verifies the token:
  * - `open`: the site has no accounts (local work against the mock), nothing is checked;
- * - `signed-out`: no session, the page offers "Sign in";
- * - `not-invited`: signed in, not on tailor-api's allowlist (D-112), with the id to send;
- * - `invited`: in. Also when tailor-api cannot say: the page then shows its own error.
+ * - `denied`: no session, a token tailor-api refuses, or no `tailor` role;
+ * - `allowed`: in. Also when tailor-api cannot say: the page then shows its own error.
  */
-export type Access =
-    | {
-          state: 'open'
-      }
-    | {
-          state: 'signed-out'
-      }
-    | {
-          state: 'not-invited'
-          userId: string
-      }
-    | {
-          state: 'invited'
-      }
+export type Access = {
+    state: 'open' | 'denied' | 'allowed'
+}
 
 /** One call to tailor-api `GET /me` per request (React cache), only with a session. */
 export const requestAccess = cache(async (): Promise<Access> => {
@@ -36,29 +26,24 @@ export const requestAccess = cache(async (): Promise<Access> => {
         }
     if (!(await requestSession()))
         return {
-            state: 'signed-out',
+            state: 'denied',
         }
     try {
         const me = await profileApi.me(await serverApi())
-        return me.invited
-            ? {
-                  state: 'invited',
-              }
-            : {
-                  state: 'not-invited',
-                  userId: me.userId,
-              }
+        return {
+            state: me.allowed ? 'allowed' : 'denied',
+        }
     } catch (error) {
-        // The token was refused (a session ended elsewhere): sign in again.
+        // The token was refused (a session ended elsewhere).
         if (isApiError(error) && error.code === 'UNAUTHORIZED')
             return {
-                state: 'signed-out',
+                state: 'denied',
             }
         return {
-            state: 'invited',
+            state: 'allowed',
         }
     }
 })
 
 /** The page may render its data. */
-export const mayEnter = (access: Access) => access.state === 'open' || access.state === 'invited'
+export const mayEnter = (access: Access) => access.state !== 'denied'

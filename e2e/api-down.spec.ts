@@ -22,8 +22,8 @@ test.describe('API down', () => {
     })
 
     test('a page that needs no API still renders', async ({ page }) => {
-        const response = await page.goto('/?lang=en')
-        expect(response?.status()).toBe(200)
+        const response = await page.goto('/nowhere?lang=en')
+        expect(response?.status()).toBe(404)
         await expect(
             page.getByRole('heading', {
                 level: 1,

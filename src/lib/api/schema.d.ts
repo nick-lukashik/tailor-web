@@ -11,7 +11,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The caller: user id and whether Tailor is open to them */
+        /** The caller: user id and whether the token carries the tailor role */
         get: operations["MeController_me_v1"];
         put?: never;
         post?: never;
@@ -113,11 +113,11 @@ export interface components {
         Me: {
             /** Format: uuid */
             userId: string;
-            invited: boolean;
+            allowed: boolean;
         };
         Error: {
             /** @enum {string} */
-            code: "VALIDATION_FAILED" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_INVITED" | "NOT_FOUND" | "PAYLOAD_TOO_LARGE" | "UNPROCESSABLE" | "RATE_LIMITED" | "INTERNAL" | "UNAVAILABLE" | "TIMEOUT";
+            code: "VALIDATION_FAILED" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "PAYLOAD_TOO_LARGE" | "UNPROCESSABLE" | "RATE_LIMITED" | "INTERNAL" | "UNAVAILABLE" | "TIMEOUT";
             message: string;
             details?: {
                 path: string;
@@ -631,7 +631,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Not on the allowlist of Tailor (NOT_INVITED) */
+            /** @description The token lacks the tailor role (FORBIDDEN) */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -711,7 +711,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Not on the allowlist of Tailor (NOT_INVITED) */
+            /** @description The token lacks the tailor role (FORBIDDEN) */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -789,7 +789,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Not on the allowlist of Tailor (NOT_INVITED) */
+            /** @description The token lacks the tailor role (FORBIDDEN) */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -862,7 +862,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Not on the allowlist of Tailor (NOT_INVITED) */
+            /** @description The token lacks the tailor role (FORBIDDEN) */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -948,7 +948,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Not on the allowlist of Tailor (NOT_INVITED) */
+            /** @description The token lacks the tailor role (FORBIDDEN) */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1013,7 +1013,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Not on the allowlist of Tailor (NOT_INVITED) */
+            /** @description The token lacks the tailor role (FORBIDDEN) */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -1078,7 +1078,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description Not on the allowlist of Tailor (NOT_INVITED) */
+            /** @description The token lacks the tailor role (FORBIDDEN) */
             403: {
                 headers: {
                     [name: string]: unknown;

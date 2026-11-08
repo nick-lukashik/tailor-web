@@ -9,9 +9,9 @@
 // Node's built-in TypeScript support.
 //
 // The caller: no Authorization is a local visitor (a site without accounts),
-// invited. `Bearer at.<user id>.<random>` (the tokens of e2e/mock-id.mjs) is that
-// user; ids starting with ffffffff are not invited (403 NOT_INVITED but /me).
-// Anything else is a 401. Profiles are kept per user; a PUT is refused for a
+// let in. `Bearer <header>.<payload>.<random>` (the unsigned JWT-shaped tokens of
+// e2e/mock-id.mjs) is the payload's `sub`; without `tailor` in its `roles` it gets
+// 403 FORBIDDEN everywhere but /me. Anything else is a 401. Profiles are kept per user; a PUT is refused for a
 // document that is not an object, an unknown section, or a person.email without @.
 // GET /api/v1/profile/cv.pdf (the master CV) answers MOCK_PDF for a saved profile.
 import { randomUUID } from 'node:crypto'
@@ -92,13 +92,35 @@ const SECTIONS = [
     'settings',
 ]
 
-/** Who calls: a user id, or null for a token the mock does not know. */
-function callerOf(req: IncomingMessage): string | null {
-    const header = req.headers.authorization
-    if (!header) return LOCAL_VISITOR
-    return /^Bearer at\.([0-9a-f-]{36})\.[\w-]+$/.exec(header)?.[1] ?? null
+type Caller = {
+    userId: string
+    allowed: boolean
 }
-const invited = (userId: string) => !userId.startsWith('ffffffff')
+
+/** Who calls, or null for a token the mock does not know. */
+function callerOf(req: IncomingMessage): Caller | null {
+    const header = req.headers.authorization
+    if (!header)
+        return {
+            userId: LOCAL_VISITOR,
+            allowed: true,
+        }
+    const payload = /^Bearer [\w-]+\.([\w-]+)\.[\w-]+$/.exec(header)?.[1]
+    if (!payload) return null
+    try {
+        const claims = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as {
+            sub?: unknown
+            roles?: unknown
+        }
+        if (typeof claims.sub !== 'string' || !/^[0-9a-f-]{36}$/.test(claims.sub)) return null
+        return {
+            userId: claims.sub,
+            allowed: Array.isArray(claims.roles) && claims.roles.includes('tailor'),
+        }
+    } catch {
+        return null
+    }
+}
 
 function profileIssues(document: unknown): Issue[] {
     if (typeof document !== 'object' || document === null || Array.isArray(document))
@@ -254,20 +276,21 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
         if (!res.writableFinished) record.aborted = true
     })
 
-    const caller = callerOf(req)
-    if (!caller) return fail(res, 401, 'UNAUTHORIZED', 'Invalid or expired access token', requestId)
+    const who = callerOf(req)
+    if (!who) return fail(res, 401, 'UNAUTHORIZED', 'Invalid or expired access token', requestId)
+    const caller = who.userId
     if (method === 'GET' && path === '/api/v1/me') {
         return send(
             res,
             200,
             {
                 userId: caller,
-                invited: invited(caller),
+                allowed: who.allowed,
             },
             requestId,
         )
     }
-    if (!invited(caller)) return fail(res, 403, 'NOT_INVITED', 'Tailor is by invitation', requestId)
+    if (!who.allowed) return fail(res, 403, 'FORBIDDEN', 'Forbidden', requestId)
 
     if (method === 'GET' && path === '/api/v1/profile') {
         const profile = profiles.get(caller)

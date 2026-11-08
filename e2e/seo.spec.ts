@@ -1,87 +1,97 @@
-import { en, expect, NOINDEX_URL, test } from './fixtures'
+import { en, expect, test } from './fixtures'
+
+/** Nothing a crawler or a link preview can see may say what the site is for. */
+const PURPOSE = /\bCV\b|résumé|resume|vacanc|cover letter|job|ваканс|резюме|работ/i
 
 test.describe('SEO and security', () => {
-    test('the bare path is its own canonical (x-default)', async ({ page, baseURL }) => {
+    test('/ has nothing of its own: it leads to the applications', async ({ page, baseURL }) => {
         await page.goto('/')
-        const self = new RegExp(`^${baseURL}/?$`)
+        await expect(page).toHaveURL(`${baseURL}/applications`)
+        const self = new RegExp(`^${baseURL}/applications$`)
         await expect(page.locator('link[rel="canonical"]').first()).toHaveAttribute('href', self)
         await expect(page.locator('meta[property="og:url"]').first()).toHaveAttribute('content', self)
         await expect(page.locator('link[rel="alternate"][hreflang="x-default"]').first()).toHaveAttribute('href', self)
     })
 
-    test('robots.txt allows the site and points at the sitemap', async ({ request, baseURL }) => {
+    test('robots.txt disallows everything and names no sitemap; there is none', async ({ request }) => {
         const response = await request.get('/robots.txt')
         expect(response.ok()).toBe(true)
         const text = await response.text()
-        expect(text).toContain('Allow: /')
-        expect(text).toContain('Disallow: /api/')
-        expect(text).toContain(`Sitemap: ${baseURL}/sitemap.xml`)
+        expect(text).toContain('Disallow: /')
+        expect(text).not.toContain('Allow:')
+        expect(text).not.toContain('Sitemap:')
+        expect((await request.get('/sitemap.xml')).status()).toBe(404)
     })
 
-    test('sitemap.xml lists the home page per language and no applications', async ({ request, baseURL }) => {
-        const response = await request.get('/sitemap.xml')
-        expect(response.headers()['content-type']).toContain('xml')
-        const xml = await response.text()
-        expect(xml).toContain(`<loc>${baseURL}/?lang=en</loc>`)
-        expect(xml).toContain(`<loc>${baseURL}/?lang=ru</loc>`)
-        expect(xml).not.toContain('/applications')
-    })
-
-    test('applications are never indexed, even with ROBOTS=index', async ({ page }) => {
+    test('every page says noindex, nofollow', async ({ page }) => {
         for (const path of [
             '/applications',
             '/applications/application-045',
+            '/profile',
+            '/nowhere',
         ]) {
             await page.goto(`${path}?lang=en`)
-            await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex, nofollow')
+            // A 404 also gets Next.js' own `noindex`.
+            const robots = await page
+                .locator('meta[name="robots"]')
+                .evaluateAll(metas => metas.map(meta => meta.getAttribute('content')))
+            expect(robots, path).toContain('noindex, nofollow')
         }
     })
 
-    for (const { path, title, description } of [
-        {
-            path: '/',
-            title: en.home.meta.title,
-            description: en.home.meta.description,
-        },
-    ]) {
-        test(`${path} has title, description, canonical, hreflang, Open Graph and JSON-LD`, async ({
-            page,
-            baseURL,
-        }) => {
-            const response = await page.goto(`${path}?lang=en`)
-            await expect(page).toHaveTitle(title)
+    test('what link previews and installs read is neutral', async ({ page, request }) => {
+        for (const lang of [
+            'en',
+            'ru',
+        ]) {
+            await page.goto(`/applications?lang=${lang}`)
             const meta = (selector: string) => page.locator(selector).first()
-            await expect(meta('meta[name="description"]')).toHaveAttribute('content', description)
-            await expect(meta('link[rel="canonical"]')).toHaveAttribute(
-                'href',
-                `${baseURL}${path === '/' ? '/' : path}?lang=en`,
-            )
-            await expect(meta('link[rel="alternate"][hreflang="ru"]')).toHaveAttribute(
-                'href',
-                new RegExp(`${path === '/' ? '/' : path}\\?lang=ru$`),
-            )
-            await expect(meta('meta[property="og:title"]')).toHaveAttribute('content', title)
-            await expect(meta('meta[property="og:image"]')).toHaveAttribute(
-                'content',
-                new RegExp(`^${baseURL}/opengraph-image`),
-            )
-            await expect(meta('meta[name="twitter:card"]')).toHaveAttribute('content', 'summary_large_image')
-            await expect(meta('link[rel="manifest"]')).toHaveAttribute('href', '/manifest.webmanifest')
-            await expect(meta('link[rel="icon"]')).toHaveAttribute('href', /^\/icon/)
-            // ROBOTS=index (the default): no robots meta at all.
-            await expect(page.locator('meta[name="robots"]')).toHaveCount(0)
-
-            const nonce = response?.headers()['content-security-policy']?.match(/'nonce-([^']+)'/)?.[1]
-            const jsonLd = page.locator('script[type="application/ld+json"]')
-            // Browsers hide the nonce attribute after parsing; the property keeps it.
-            expect(await jsonLd.evaluate(script => (script as HTMLScriptElement).nonce)).toBe(nonce)
-            const data = JSON.parse((await jsonLd.textContent()) ?? '{}')
-            expect(data['@graph'].map((node: { '@type': string }) => node['@type'])).toEqual([
-                'WebSite',
-                'Organization',
+            for (const selector of [
+                'meta[property="og:site_name"]',
+                'meta[property="og:image:alt"]',
             ])
-        })
-    }
+                expect(await meta(selector).getAttribute('content'), selector).not.toMatch(PURPOSE)
+            const data = JSON.parse((await page.locator('script[type="application/ld+json"]').textContent()) ?? '{}')
+            expect(JSON.stringify(data), lang).not.toMatch(PURPOSE)
+        }
+        const manifest = await (await request.get('/manifest.webmanifest')).json()
+        expect(manifest.name).toBe('Tailor')
+        expect(JSON.stringify(manifest)).not.toMatch(PURPOSE)
+        expect(en.meta.description).not.toMatch(PURPOSE)
+        expect(en.meta.ogAlt).not.toMatch(PURPOSE)
+    })
+
+    test('a page has title, description, canonical, hreflang, Open Graph and JSON-LD', async ({ page, baseURL }) => {
+        const path = '/applications'
+        const title = `${en.applications.meta.title} · ${en.meta.siteName}`
+        const response = await page.goto(`${path}?lang=en`)
+        await expect(page).toHaveTitle(title)
+        const meta = (selector: string) => page.locator(selector).first()
+        await expect(meta('meta[name="description"]')).toHaveAttribute('content', en.applications.meta.description)
+        await expect(meta('link[rel="canonical"]')).toHaveAttribute('href', `${baseURL}${path}?lang=en`)
+        await expect(meta('link[rel="alternate"][hreflang="ru"]')).toHaveAttribute(
+            'href',
+            new RegExp(`${path}\\?lang=ru$`),
+        )
+        await expect(meta('meta[property="og:title"]')).toHaveAttribute('content', title)
+        await expect(meta('meta[property="og:image"]')).toHaveAttribute(
+            'content',
+            new RegExp(`^${baseURL}/opengraph-image`),
+        )
+        await expect(meta('meta[name="twitter:card"]')).toHaveAttribute('content', 'summary_large_image')
+        await expect(meta('link[rel="manifest"]')).toHaveAttribute('href', '/manifest.webmanifest')
+        await expect(meta('link[rel="icon"]')).toHaveAttribute('href', /^\/icon/)
+
+        const nonce = response?.headers()['content-security-policy']?.match(/'nonce-([^']+)'/)?.[1]
+        const jsonLd = page.locator('script[type="application/ld+json"]')
+        // Browsers hide the nonce attribute after parsing; the property keeps it.
+        expect(await jsonLd.evaluate(script => (script as HTMLScriptElement).nonce)).toBe(nonce)
+        const data = JSON.parse((await jsonLd.textContent()) ?? '{}')
+        expect(data['@graph'].map((node: { '@type': string }) => node['@type'])).toEqual([
+            'WebSite',
+            'Organization',
+        ])
+    })
 
     test('pages carry a nonce CSP without unsafe-inline scripts and security headers', async ({ page }) => {
         const response = await page.goto('/applications')
@@ -145,30 +155,4 @@ test.describe('SEO and security', () => {
         const outside = await request.get('/api/internal/anything')
         expect(outside.status()).toBe(404)
     })
-})
-
-test.describe('ROBOTS=noindex, set at runtime on the same build', () => {
-    test.skip(!NOINDEX_URL, 'needs a site started with ROBOTS=noindex (PW_NOINDEX_URL)')
-    test.use({
-        baseURL: NOINDEX_URL,
-    })
-
-    test('robots.txt disallows everything and has no sitemap', async ({ request }) => {
-        const response = await request.get('/robots.txt')
-        expect(response.ok()).toBe(true)
-        const text = await response.text()
-        expect(text).toContain('Disallow: /')
-        expect(text).not.toContain('Allow:')
-        expect(text).not.toContain('Sitemap:')
-    })
-
-    for (const path of [
-        '/',
-        '/applications',
-    ]) {
-        test(`${path} says noindex, nofollow`, async ({ page }) => {
-            await page.goto(`${path}?lang=en`)
-            await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex, nofollow')
-        })
-    }
 })
