@@ -6,21 +6,24 @@ import { serverEnv } from '@/lib/env/server'
 import { getServerQueryClient } from '@/lib/query/server'
 import { mayEnter, requestAccess } from '@/lib/session/access'
 import { ApplicationView } from '../_components/application-view'
+import { applicationTitle } from '../application-title'
 import { loadApplication } from '../load-application'
 
 export async function generateMetadata({ params }: PageProps<'/applications/[id]'>): Promise<Metadata> {
     const { id } = await params
-    const t = await getTranslations('applications.meta')
+    const t = await getTranslations('applications')
     // Without access the layout sends the visitor away, and nothing names the application.
     if (!mayEnter(await requestAccess()))
         return {
-            title: t('title'),
-            description: t('description'),
+            title: t('meta.title'),
+            description: t('meta.description'),
         }
     const application = await loadApplication(id)
+    const name = applicationTitle(application) ?? t('untitled')
+    const role = application.role.trim()
     return {
-        title: application.role ? `${application.company}: ${application.role}` : application.company,
-        description: t('description'),
+        title: role ? `${name}: ${role}` : name,
+        description: t('meta.description'),
     }
 }
 

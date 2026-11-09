@@ -51,7 +51,7 @@ To use the real backend, run `tailor-api` (its README, "Getting started") on `:4
 | What | Where |
 |---|---|
 | QueryClient: browser singleton, one per request on the server, devtools in dev only | `src/lib/query/`, `src/app/providers.tsx` |
-| API client, errors, keys and query options | `src/lib/api/` (`client.ts`, `errors.ts`, `applications.ts`, `types.ts`) |
+| API client, errors, keys and query options | `src/lib/api/` (`client.ts`, `errors.ts`, `applications.ts`, `vacancies.ts`, `types.ts`) |
 | Applications: server prefetch + `HydrationBoundary`, infinite list | `src/app/(private)/applications/(list)/page.tsx`, `src/app/(private)/applications/_components/applications-list.tsx` |
 | Application page: `generateMetadata`, `notFound()`, the CV link of the application (`CV_URL`) | `src/app/(private)/applications/[id]/page.tsx`, `src/app/(private)/applications/load-application.ts` |
 | Nothing is indexed (noindex everywhere, robots.txt disallows all) | `src/app/layout.tsx`, `src/app/robots.ts` |

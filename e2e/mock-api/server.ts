@@ -14,6 +14,8 @@
 // 403 FORBIDDEN everywhere but /me. Anything else is a 401. Profiles are kept per user; a PUT is refused for a
 // document that is not an object, an unknown section, or a person.email without @.
 // GET /api/v1/profile/cv.pdf (the master CV) answers MOCK_PDF for a saved profile.
+// POST /api/v1/vacancies/intake adds `pending` applications with no company or role;
+// a link already in the list is `existing` (same string, no normalization).
 import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
@@ -32,6 +34,8 @@ type Application = {
     vacancyUrl: string | null
     vacancyText: string
     status: (typeof statuses)[number]
+    vacancyId: string | null
+    parseStatus: 'pending' | 'parsed' | 'failed' | null
     createdAt: string
 }
 type Issue = {
@@ -168,6 +172,8 @@ function seed() {
                 vacancyUrl: n % 2 === 0 ? `https://example.com/jobs/${n}` : null,
                 vacancyText: n % 3 === 0 ? '' : `Vacancy text of seed application ${n}. Written by the mock API.`,
                 status: statuses[n % statuses.length] ?? 'new',
+                vacancyId: null,
+                parseStatus: null,
                 createdAt: new Date(start + n * 3_600_000).toISOString(),
             }
         },
@@ -457,6 +463,8 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
             vacancyUrl: (vacancyUrl as string | undefined) ?? null,
             vacancyText: vacancyText as string,
             status: 'new',
+            vacancyId: null,
+            parseStatus: null,
             createdAt: new Date().toISOString(),
         }
         applications = [
@@ -464,6 +472,99 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
             ...applications,
         ]
         return send(res, 201, application, requestId)
+    }
+
+    if (method === 'POST' && path === '/api/v1/vacancies/intake') {
+        let input: unknown
+        try {
+            input = await readJson(req, record)
+        } catch {
+            return fail(res, 400, 'VALIDATION_FAILED', 'Body is not JSON', requestId, [])
+        }
+        const items = (
+            input as
+                | {
+                      items?: unknown
+                  }
+                | undefined
+        )?.items
+        if (!Array.isArray(items) || items.length < 1 || items.length > 200) {
+            return fail(res, 400, 'VALIDATION_FAILED', 'Request validation failed', requestId, [
+                {
+                    path: 'items',
+                    message: 'Expected 1 to 200 items',
+                },
+            ])
+        }
+        const issues: Issue[] = []
+        const parsed = items.map((item: unknown, index) => {
+            const { url, text = '' } = (item ?? {}) as {
+                url?: unknown
+                text?: unknown
+            }
+            if (url !== undefined && (typeof url !== 'string' || !/^https?:\/\/\S+$/.test(url) || url.length > 2048))
+                issues.push({
+                    path: `items.${index}.url`,
+                    message: 'Invalid URL',
+                })
+            if (typeof text !== 'string' || text.length > 100_000)
+                issues.push({
+                    path: `items.${index}.text`,
+                    message: 'Too big: expected string to have <=100000 characters',
+                })
+            else if (url === undefined && !text.trim())
+                issues.push({
+                    path: `items.${index}`,
+                    message: 'A vacancy needs a link or its text',
+                })
+            return {
+                url: url as string | undefined,
+                text: typeof text === 'string' ? text.trim() : '',
+            }
+        })
+        await sleep(createDelayMs)
+        if (issues.length > 0)
+            return fail(res, 400, 'VALIDATION_FAILED', 'Request validation failed', requestId, issues)
+        const results = parsed.map(({ url, text }) => {
+            const found = url === undefined ? undefined : applications.find(item => item.vacancyUrl === url)
+            if (found)
+                return {
+                    applicationId: found.id,
+                    vacancyId: found.vacancyId ?? randomUUID(),
+                    result: 'existing' as const,
+                }
+            const application: Application = {
+                id: randomUUID(),
+                company: '',
+                role: '',
+                vacancyUrl: url ?? null,
+                vacancyText: text,
+                status: 'new',
+                vacancyId: randomUUID(),
+                parseStatus: 'pending',
+                createdAt: new Date().toISOString(),
+            }
+            applications = [
+                application,
+                ...applications,
+            ]
+            return {
+                applicationId: application.id,
+                vacancyId: application.vacancyId as string,
+                result: 'created' as const,
+            }
+        })
+        const created = results.filter(item => item.result === 'created').length
+        return send(
+            res,
+            200,
+            {
+                created,
+                existing: results.length - created,
+                items: results,
+            },
+            requestId,
+        )
     }
 
     return fail(res, 404, 'NOT_FOUND', `No route ${method} ${path}`, requestId)

@@ -6,7 +6,9 @@ import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
 import { applicationQueries } from '@/lib/api/applications'
 import { browserApi } from '@/lib/api/browser'
+import { applicationTitle } from '../application-title'
 import { useApplicationDate } from './application-date'
+import { ParseBadge } from './parse-badge'
 import { StatusBadge } from './status-badge'
 
 /**
@@ -16,6 +18,7 @@ import { StatusBadge } from './status-badge'
  */
 export function ApplicationView({ id, cvUrl }: { id: string; cvUrl: string }) {
     const t = useTranslations('applications.detail')
+    const tApplications = useTranslations('applications')
     const formatDate = useApplicationDate()
     const { data: application } = useQuery(applicationQueries.detail(browserApi, id))
     if (!application) return null
@@ -28,10 +31,13 @@ export function ApplicationView({ id, cvUrl }: { id: string; cvUrl: string }) {
                 ← {t('back')}
             </Link>
             <header className="grid gap-2">
-                <h1 className="text-3xl font-bold tracking-tight break-words">{application.company}</h1>
-                {application.role && <p className="text-lg text-muted-foreground">{application.role}</p>}
+                <h1 className="text-3xl font-bold tracking-tight break-words">
+                    {applicationTitle(application) ?? tApplications('untitled')}
+                </h1>
+                {application.role.trim() && <p className="text-lg text-muted-foreground">{application.role}</p>}
                 <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
                     <StatusBadge status={application.status} />
+                    <ParseBadge status={application.parseStatus} />
                     <span>
                         {t.rich('createdAt', {
                             date: formatDate(application.createdAt),

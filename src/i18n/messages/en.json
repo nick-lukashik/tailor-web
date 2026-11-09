@@ -50,6 +50,33 @@
             "vacancyLink": "Vacancy",
             "vacancyText": "Vacancy text",
             "emptyVacancyText": "No vacancy text."
+        },
+        "untitled": "Untitled vacancy",
+        "parse": {
+            "pending": "Processing",
+            "failed": "Couldn't read"
+        },
+        "intake": {
+            "title": "Add vacancy",
+            "url": "Vacancy link",
+            "text": "Vacancy text",
+            "textHint": "Paste it as is, no formatting needed. A link, the text or both.",
+            "links": "Links, one per line",
+            "linksHint": "Up to {max} links at a time.",
+            "toBatch": "Several links",
+            "toSingle": "One vacancy",
+            "submit": "Add",
+            "submitting": "Adding…",
+            "added": "Added.",
+            "existing": "Already in your list.",
+            "batchResult": "{created} added, {existing} already in your list.",
+            "emptySingle": "Add a link or the vacancy text.",
+            "emptyBatch": "Add at least one link.",
+            "tooMany": "{count} links: at most {max} at a time.",
+            "rejected": "Not added:",
+            "itemIssue": "Link {number}: {message}",
+            "tooLarge": "Too much text at once.",
+            "failed": "Could not add it. Try again."
         }
     },
     "error": {

@@ -106,6 +106,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/vacancies/intake": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Links and texts of vacancies (1–200) into the caller's pool; unparsed, `pending` */
+        post: operations["VacanciesController_intake_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -138,6 +155,10 @@ export interface components {
             vacancyText: string;
             /** @enum {string} */
             status: "new" | "sent" | "interview" | "offer" | "rejected";
+            /** Format: uuid */
+            vacancyId: string | null;
+            /** @enum {string|null} */
+            parseStatus: "pending" | "parsed" | "failed" | null;
             /** Format: date-time */
             createdAt: string;
         };
@@ -361,6 +382,8 @@ export interface components {
         /** @default [] */
         ProfileSkills: {
             label: string;
+            /** @default false */
+            aiOnly: boolean;
             /** @default [] */
             items: {
                 name: string;
@@ -407,6 +430,8 @@ export interface components {
             full: string;
             /** @default  */
             compact: string;
+            /** @default false */
+            aiOnly: boolean;
         }[];
         ProfileStory: {
             /** @default  */
@@ -519,12 +544,37 @@ export interface components {
              * @enum {string}
              */
             factsMode: "strict" | "free";
+            /** @default true */
+            cvShowLocation: boolean;
+            /** @default true */
+            cvShowPhone: boolean;
         };
         SavedProfile: {
             version: number;
             sha256: string;
             /** Format: date-time */
             updatedAt: string;
+        };
+        VacancyIntake: {
+            items: components["schemas"]["VacancyIntakeItem"][];
+        };
+        VacancyIntakeItem: {
+            /** Format: uri */
+            url?: string;
+            /** @default  */
+            text: string;
+        };
+        VacancyIntakeResult: {
+            created: number;
+            existing: number;
+            items: {
+                /** Format: uuid */
+                applicationId: string;
+                /** Format: uuid */
+                vacancyId: string;
+                /** @enum {string} */
+                result: "created" | "existing";
+            }[];
         };
     };
     responses: never;
@@ -1098,6 +1148,95 @@ export interface operations {
             };
             /** @description The profile does not make a CV: what is missing, a TeX error or too many pages (UNPROCESSABLE) */
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Internal error (INTERNAL) */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description A dependency (Postgres, tailor-tex) over its time budget or unavailable, retry later (UNAVAILABLE) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Request over its budget, 10 s unless the route says otherwise (TIMEOUT) */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    VacanciesController_intake_v1: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Echoed back; generated when absent */
+                "x-request-id"?: string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VacancyIntake"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VacancyIntakeResult"];
+                };
+            };
+            /** @description Validation failed (VALIDATION_FAILED) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid access token (UNAUTHORIZED) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token lacks the tailor role (FORBIDDEN) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Request body over 1 MiB (PAYLOAD_TOO_LARGE) */
+            413: {
                 headers: {
                     [name: string]: unknown;
                 };
