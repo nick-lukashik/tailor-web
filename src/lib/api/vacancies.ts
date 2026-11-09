@@ -1,7 +1,12 @@
 import { mutationOptions } from '@tanstack/react-query'
 import { applicationKeys } from './applications'
 import { type ApiClient } from './client'
-import { type VacancyIntakeInput, type VacancyIntakeResult, type VacancyParseQueued } from './types'
+import {
+    type VacancyFetchQueued,
+    type VacancyIntakeInput,
+    type VacancyIntakeResult,
+    type VacancyParseQueued,
+} from './types'
 
 /** Items per intake request (tailor-api `INTAKE_MAX_ITEMS`). */
 export const INTAKE_MAX_ITEMS = 200
@@ -16,6 +21,11 @@ export const vacanciesApi = {
     /** Reads the vacancy again in the background (202): `pending` until it is done. */
     reparse: (api: ApiClient, vacancyId: string) =>
         api.request<VacancyParseQueued>(`/api/v1/vacancies/${encodeURIComponent(vacancyId)}/parse`, {
+            method: 'POST',
+        }),
+    /** Reads the vacancy's link again in the background (202), its apply form too; 409 without a link. */
+    refetch: (api: ApiClient, vacancyId: string) =>
+        api.request<VacancyFetchQueued>(`/api/v1/vacancies/${encodeURIComponent(vacancyId)}/fetch`, {
             method: 'POST',
         }),
 }
@@ -33,6 +43,11 @@ export const vacancyKeys = {
         [
             ...vacancyKeys.all,
             'reparse',
+        ] as const,
+    refetch: () =>
+        [
+            ...vacancyKeys.all,
+            'refetch',
         ] as const,
 }
 
@@ -52,6 +67,16 @@ export const vacancyMutations = {
         mutationOptions({
             mutationKey: vacancyKeys.reparse(),
             mutationFn: (vacancyId: string) => vacanciesApi.reparse(api, vacancyId),
+            onSuccess: (_result, _vacancyId, _onMutateResult, context) =>
+                context.client.invalidateQueries({
+                    queryKey: applicationKeys.all,
+                }),
+        }),
+    /** The link is `pending` again: as for a reparse, everything about applications refetches (and polls). */
+    refetch: (api: ApiClient) =>
+        mutationOptions({
+            mutationKey: vacancyKeys.refetch(),
+            mutationFn: (vacancyId: string) => vacanciesApi.refetch(api, vacancyId),
             onSuccess: (_result, _vacancyId, _onMutateResult, context) =>
                 context.client.invalidateQueries({
                     queryKey: applicationKeys.all,

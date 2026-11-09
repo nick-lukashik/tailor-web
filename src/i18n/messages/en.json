@@ -100,7 +100,11 @@
                 "telegram": "Telegram",
                 "link": "Link",
                 "other": "Other"
-            }
+            },
+            "fetching": "Reading the vacancy page…",
+            "fetchFailed": "Couldn't read the vacancy page.",
+            "fetchAgain": "Read page again",
+            "fetchStarted": "Reading the page again…"
         },
         "cv": {
             "title": "CV",
@@ -249,6 +253,25 @@
                 "noProfile": "Fill in your profile first.",
                 "model": "The model couldn't finish.",
                 "failed": "Couldn't write the messages."
+            }
+        },
+        "form": {
+            "title": "Application form",
+            "answers": "Answers",
+            "copyAll": "Copy all answers",
+            "required": "Required",
+            "options": "Options",
+            "attachCv": "Attach your CV.",
+            "noAnswer": "No answer yet.",
+            "fillIn": "Fill this in yourself.",
+            "type": {
+                "text": "Short text",
+                "textarea": "Long text",
+                "select": "One option",
+                "multiselect": "Several options",
+                "boolean": "Yes or no",
+                "file": "File",
+                "other": "Other"
             }
         },
         "error": "Something went wrong. Try again."

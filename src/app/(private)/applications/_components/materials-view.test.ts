@@ -12,6 +12,7 @@ const content: MaterialsContent = {
     whyMe: [
         'Five years of TypeScript',
     ],
+    answers: [],
 }
 const CV = {
     url: 'https://cv.example.com/a/CV.pdf',

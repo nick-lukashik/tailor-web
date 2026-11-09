@@ -34,6 +34,10 @@
 // application-040 (on the first page) is ready to send (status new, CV and
 // materials ready), 010 is
 // parsed (no CV yet), 009 failed with no text, 008 pending, 007 failed with a text.
+// A vacancy with a link is `fetched` (040 with MOCK_FORM, its answers in the
+// materials), without one `skipped`; 012 is parsed but its page `failed`.
+// POST /api/v1/vacancies/<id>/fetch (202, 409 without a link) reads the link
+// again: after MOCK_PARSE_MS it is `fetched` with MOCK_FORM.
 import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
@@ -103,6 +107,11 @@ type MaterialsContent = {
     telegramMessage: string
     linkedinNote: string
     whyMe: string[]
+    answers: {
+        key: string
+        label: string
+        answer: string
+    }[]
 }
 type MaterialsVersion = {
     version: number
@@ -120,6 +129,20 @@ type Vacancy = {
     updatedAt: string
     model: string | null
     parsed: ParsedVacancy | null
+    applyForm: ApplyForm | null
+    fetchStatus: 'pending' | 'fetched' | 'failed' | 'skipped'
+    fetchError: string | null
+}
+type ApplyField = {
+    key: string
+    label: string
+    type: 'text' | 'textarea' | 'select' | 'multiselect' | 'boolean' | 'file' | 'other'
+    required: boolean
+    options?: string[]
+}
+type ApplyForm = {
+    source: 'greenhouse' | 'lever' | 'ashby' | 'workable' | 'page'
+    fields: ApplyField[]
 }
 type Issue = {
     path: string
@@ -170,6 +193,53 @@ const MOCK_PDF = Buffer.from(
     'latin1',
 )
 const MOCK_CV_FILE_NAME = 'Alex-Example-Senior-Engineer-CV.pdf'
+
+/** The apply form the mock "reads" from a vacancy page, and what its answers say. */
+const MOCK_FORM: ApplyForm = {
+    source: 'greenhouse',
+    fields: [
+        {
+            key: 'first_name',
+            label: 'First name',
+            type: 'text',
+            required: true,
+        },
+        {
+            key: 'resume',
+            label: 'Resume/CV',
+            type: 'file',
+            required: true,
+        },
+        {
+            key: 'question_101',
+            label: 'Why do you want to join us?',
+            type: 'textarea',
+            required: false,
+        },
+        {
+            key: 'question_102',
+            label: 'Are you authorized to work in Germany?',
+            type: 'select',
+            required: true,
+            options: [
+                'Yes',
+                'No',
+            ],
+        },
+        {
+            key: 'question_103',
+            label: 'Desired start date',
+            type: 'text',
+            required: false,
+        },
+    ],
+}
+const MOCK_ANSWERS: Record<string, string> = {
+    first_name: 'Alex',
+    question_101: 'I build TypeScript APIs and would like to work on your platform.',
+    question_102: 'Yes',
+    question_103: '',
+}
 
 const LOCAL_VISITOR = '00000000-0000-7000-8000-000000000000'
 const SECTIONS = [
@@ -328,6 +398,9 @@ function newVacancy(url: string | null, rawText: string): Vacancy {
         updatedAt: new Date().toISOString(),
         model: null,
         parsed: null,
+        applyForm: null,
+        fetchStatus: url ? 'fetched' : 'skipped',
+        fetchError: null,
     }
     vacancies.set(vacancy.id, vacancy)
     return vacancy
@@ -377,6 +450,7 @@ function contentOf(applicationId: string): MaterialsContent {
     const company = application?.company || 'Example GmbH'
     const role = application?.role || 'Senior backend engineer'
     const cvUrl = cvUrlOf(applicationId) ?? `${CV_PUBLIC_URL}/${applicationId}/CV.pdf`
+    const vacancy = application?.vacancyId ? vacancies.get(application.vacancyId) : undefined
     return {
         language: 'en',
         coverLetter: `Dear ${company} team,\n\nI would like to apply for the ${role} role. I have built and run TypeScript APIs on PostgreSQL for years.\n\nKind regards,\nAlex Example`,
@@ -389,6 +463,13 @@ function contentOf(applicationId: string): MaterialsContent {
             'Runs PostgreSQL in production',
             'Written English every day',
         ],
+        answers: (vacancy?.applyForm?.fields ?? [])
+            .filter(field => field.type !== 'file')
+            .map(field => ({
+                key: field.key,
+                label: field.label,
+                answer: MOCK_ANSWERS[field.key] ?? '',
+            })),
     }
 }
 
@@ -543,6 +624,11 @@ function seed() {
             null,
         ],
         [
+            12,
+            'parsed',
+            null,
+        ],
+        [
             9,
             'failed',
             'no_text',
@@ -567,6 +653,11 @@ function seed() {
         if (parseStatus !== 'pending') settle(vacancy, parseStatus, parseError)
         if (parseStatus === 'parsed')
             vacancy.parsed = parsedOf(application.company, application.role || 'Senior backend engineer')
+        if (n === 40) vacancy.applyForm = MOCK_FORM
+        if (n === 12) {
+            vacancy.fetchStatus = 'failed'
+            vacancy.fetchError = 'http_404'
+        }
     }
     // Ready to send: its CV and its materials are made, nothing is sent yet.
     const ready = applications.find(item => item.id === 'application-040')
@@ -953,6 +1044,32 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
             {
                 vacancyId: vacancy.id,
                 parseStatus: 'pending',
+            },
+            requestId,
+        )
+    }
+
+    const refetch = path.match(/^\/api\/v1\/vacancies\/([^/]+)\/fetch$/)
+    if (method === 'POST' && refetch) {
+        const id = decodeURIComponent(refetch[1] ?? '')
+        const vacancy = applications.some(item => item.vacancyId === id) ? vacancies.get(id) : undefined
+        if (!vacancy) return fail(res, 404, 'NOT_FOUND', `Vacancy ${id} not found`, requestId)
+        if (!vacancy.url) return fail(res, 409, 'CONFLICT', 'The vacancy has no link to fetch', requestId)
+        vacancy.fetchStatus = 'pending'
+        vacancy.fetchError = null
+        vacancy.updatedAt = new Date().toISOString()
+        setTimeout(() => {
+            if (vacancy.fetchStatus !== 'pending') return
+            vacancy.fetchStatus = 'fetched'
+            vacancy.applyForm = MOCK_FORM
+            vacancy.updatedAt = new Date().toISOString()
+        }, parseDelayMs)
+        return send(
+            res,
+            202,
+            {
+                vacancyId: vacancy.id,
+                fetchStatus: 'pending',
             },
             requestId,
         )

@@ -16,7 +16,7 @@ import { ApplicationCvBlock } from './application-cv'
 import { ApplicationMessages } from './application-messages'
 import { ApplicationView } from './application-view'
 
-const { vacancy: text, detail, cv: cvText, messages, workspace, stage } = en.applications
+const { vacancy: text, detail, cv: cvText, messages, workspace, stage, form: formText } = en.applications
 
 /** How React escapes text in HTML (the apostrophe of "Couldn't read"). */
 const escaped = (value: string) => value.replaceAll("'", '&#x27;')
@@ -89,6 +89,9 @@ const base: ApplicationDetail = {
         updatedAt: '2026-11-02T10:01:00.000Z',
         model: 'model-a',
         parsed,
+        applyForm: null,
+        fetchStatus: 'fetched',
+        fetchError: null,
     },
     cv: {
         status: 'none',
@@ -109,6 +112,7 @@ const content: MaterialsContent = {
     whyMe: [
         'Five years of TypeScript',
     ],
+    answers: [],
 }
 /** Ready to send: the CV and the messages are made. */
 const ready: ApplicationDetail = {
@@ -252,6 +256,93 @@ describe('ApplicationView', () => {
         )
         expect(html).toContain(`>${cvText.waiting}</p>`)
         expect(html).not.toContain(cvText.generate)
+    })
+
+    it('says the vacancy page is being read', () => {
+        const html = renderView(
+            withVacancy({
+                fetchStatus: 'pending',
+            }),
+        )
+        expect(html).toContain(text.fetching)
+        expect(html).not.toContain(text.pending)
+    })
+
+    it('notes a page that could not be read and offers to read it again', () => {
+        const html = renderView(
+            withVacancy({
+                fetchStatus: 'failed',
+                fetchError: 'http_404',
+            }),
+        )
+        expect(html).toContain(`>${escaped(text.fetchFailed)}</p>`)
+        expect(html).toContain(`>${text.fetchAgain}</button>`)
+        expect(html).not.toContain('id="application-form-title"')
+    })
+
+    it('shows the apply form with its answers, the CV for a file field', () => {
+        const html = renderView({
+            ...ready,
+            vacancy: ready.vacancy
+                ? {
+                      ...ready.vacancy,
+                      applyForm: {
+                          source: 'lever',
+                          fields: [
+                              {
+                                  key: 'name',
+                                  label: 'Full name',
+                                  type: 'text',
+                                  required: true,
+                              },
+                              {
+                                  key: 'resume',
+                                  label: 'Resume',
+                                  type: 'file',
+                                  required: true,
+                              },
+                              {
+                                  key: 'relocate',
+                                  label: 'Relocate?',
+                                  type: 'boolean',
+                                  required: false,
+                                  options: [
+                                      'Yes',
+                                      'No',
+                                  ],
+                              },
+                          ],
+                      },
+                  }
+                : null,
+            materials: {
+                ...ready.materials,
+                content: {
+                    ...content,
+                    answers: [
+                        {
+                            key: 'name',
+                            label: 'Full name',
+                            answer: 'Alex Example',
+                        },
+                    ],
+                },
+            },
+        })
+        expect(html).toContain(`>${formText.title}</h2>`)
+        expect(html).toContain('>Full name</h3>')
+        expect(html).toContain(`>${formText.required} · ${formText.type.text}</p>`)
+        expect(html).toContain('>Alex Example</div>')
+        expect(html).toContain('aria-label="Copy Full name"')
+        expect(html).toContain(`>${formText.attachCv}</p>`)
+        expect(html).toContain(`>${formText.type.boolean}</p>`)
+        expect(html).toContain('>No</li>')
+        expect(html).toContain(`>${formText.noAnswer}</p>`)
+        expect(html).toContain(formText.copyAll)
+    })
+
+    it('hides the apply form without one', () => {
+        expect(renderView(ready)).not.toContain('id="application-form-title"')
     })
 
     it('shows the text of an application added by hand, without a vacancy', () => {
