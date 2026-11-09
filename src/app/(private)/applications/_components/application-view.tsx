@@ -6,13 +6,15 @@ import { useTranslations } from 'next-intl'
 import { applicationQueries } from '@/lib/api/applications'
 import { browserApi } from '@/lib/api/browser'
 import { ApplicationCvBlock } from './application-cv'
+import { ApplicationForm } from './application-form'
 import { ApplicationMessages } from './application-messages'
 import { ApplyHeader } from './apply-header'
 import { VacancyDetails } from './vacancy-details'
+import { httpUrl } from './vacancy-format'
 
 /**
  * The application as a place to apply from: what to open and the status on
- * top, the messages to copy, then the CV and the vacancy. From the hydrated
+ * top, the messages and the apply form's answers to copy, then the CV and the vacancy. From the hydrated
  * cache; refetches in the background when stale, and every few seconds while
  * the vacancy is read or the CV or the messages are written.
  */
@@ -33,6 +35,11 @@ export function ApplicationView({ id }: { id: string }) {
             </Link>
             <ApplyHeader application={application} />
             <ApplicationMessages application={application} />
+            <ApplicationForm
+                form={vacancy?.applyForm ?? null}
+                answers={application.materials.content?.answers ?? []}
+                cvUrl={httpUrl(application.cv.url)}
+            />
             <ApplicationCvBlock
                 applicationId={application.id}
                 cv={application.cv}

@@ -393,7 +393,7 @@
                         "bearer": []
                     }
                 ],
-                "summary": "One of the caller's applications with its vacancy (text and parse), CV and materials status",
+                "summary": "One of the caller's applications with its vacancy (text and parse) and CV status",
                 "tags": ["applications"]
             },
             "patch": {
@@ -1188,7 +1188,7 @@
                         "bearer": []
                     }
                 ],
-                "summary": "Links and texts of vacancies (1–200) into the caller's pool; each new text is parsed in the background",
+                "summary": "Links and texts of vacancies (1–200) into the caller's pool; each new link is read and each vacancy parsed in the background",
                 "tags": ["vacancies"]
             }
         },
@@ -1292,6 +1292,119 @@
                     }
                 ],
                 "summary": "Parses a vacancy of the caller's pool again, in the background; `pending` until then",
+                "tags": ["vacancies"]
+            }
+        },
+        "/api/v1/vacancies/{id}/fetch": {
+            "post": {
+                "operationId": "VacanciesController_refetch_v1",
+                "parameters": [
+                    {
+                        "name": "x-request-id",
+                        "in": "header",
+                        "description": "Echoed back; generated when absent",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "id",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/VacancyFetchQueued"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "No valid access token (UNAUTHORIZED)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "The token lacks the tailor role (FORBIDDEN)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found (NOT_FOUND)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflicts with the current state (CONFLICT)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal error (INTERNAL)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "A dependency (Postgres, tailor-tex) over its time budget or unavailable, retry later (UNAVAILABLE)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "504": {
+                        "description": "Request over its budget, 10 s unless the route says otherwise (TIMEOUT)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Reads the link of a vacancy of the caller's pool again (its text when none was pasted, and the apply form), in the background",
                 "tags": ["vacancies"]
             }
         }
@@ -1569,9 +1682,37 @@
                                 "$ref": "#/components/schemas/ParsedVacancy"
                             }
                         ]
+                    },
+                    "applyForm": {
+                        "nullable": true,
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ApplyForm"
+                            }
+                        ]
+                    },
+                    "fetchStatus": {
+                        "type": "string",
+                        "enum": ["pending", "fetched", "failed", "skipped"]
+                    },
+                    "fetchError": {
+                        "nullable": true,
+                        "type": "string"
                     }
                 },
-                "required": ["id", "url", "rawText", "parseStatus", "parseError", "updatedAt", "model", "parsed"],
+                "required": [
+                    "id",
+                    "url",
+                    "rawText",
+                    "parseStatus",
+                    "parseError",
+                    "updatedAt",
+                    "model",
+                    "parsed",
+                    "applyForm",
+                    "fetchStatus",
+                    "fetchError"
+                ],
                 "additionalProperties": false
             },
             "ParsedVacancy": {
@@ -1723,6 +1864,55 @@
                 ],
                 "additionalProperties": false
             },
+            "ApplyForm": {
+                "type": "object",
+                "properties": {
+                    "source": {
+                        "type": "string",
+                        "enum": ["greenhouse", "lever", "ashby", "workable", "page"]
+                    },
+                    "fields": {
+                        "maxItems": 300,
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ApplyField"
+                        }
+                    }
+                },
+                "required": ["source", "fields"],
+                "additionalProperties": false
+            },
+            "ApplyField": {
+                "type": "object",
+                "properties": {
+                    "key": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 300
+                    },
+                    "label": {
+                        "type": "string",
+                        "maxLength": 2000
+                    },
+                    "type": {
+                        "type": "string",
+                        "enum": ["text", "textarea", "select", "multiselect", "boolean", "file", "other"]
+                    },
+                    "required": {
+                        "type": "boolean"
+                    },
+                    "options": {
+                        "maxItems": 200,
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "maxLength": 500
+                        }
+                    }
+                },
+                "required": ["key", "label", "type", "required"],
+                "additionalProperties": false
+            },
             "ApplicationCv": {
                 "type": "object",
                 "properties": {
@@ -1753,6 +1943,109 @@
                         "type": "string",
                         "format": "date-time",
                         "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                    }
+                },
+                "required": ["status"],
+                "additionalProperties": false
+            },
+            "ApplicationMaterials": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "enum": ["none", "queued", "generating", "ready", "failed"]
+                    },
+                    "version": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991
+                    },
+                    "content": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/MaterialsContent"
+                            }
+                        ]
+                    },
+                    "error": {
+                        "type": "string"
+                    },
+                    "updatedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                    }
+                },
+                "required": ["status"],
+                "additionalProperties": false
+            },
+            "MaterialsContent": {
+                "type": "object",
+                "properties": {
+                    "language": {
+                        "type": "string",
+                        "enum": ["en", "ru"]
+                    },
+                    "coverLetter": {
+                        "type": "string"
+                    },
+                    "emailSubject": {
+                        "type": "string"
+                    },
+                    "emailBody": {
+                        "type": "string"
+                    },
+                    "telegramMessage": {
+                        "type": "string"
+                    },
+                    "linkedinNote": {
+                        "type": "string"
+                    },
+                    "whyMe": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "answers": {
+                        "default": [],
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "key": {
+                                    "type": "string"
+                                },
+                                "label": {
+                                    "type": "string"
+                                },
+                                "answer": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": ["key", "label", "answer"],
+                            "additionalProperties": false
+                        }
+                    }
+                },
+                "required": [
+                    "language",
+                    "coverLetter",
+                    "emailSubject",
+                    "emailBody",
+                    "telegramMessage",
+                    "linkedinNote",
+                    "whyMe",
+                    "answers"
+                ],
+                "additionalProperties": false
+            },
+            "UpdateApplication": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "enum": ["new", "sent", "interview", "offer", "rejected"]
                     }
                 },
                 "required": ["status"],
@@ -3058,6 +3351,11 @@
                                 "default": "",
                                 "type": "string",
                                 "maxLength": 4000
+                            },
+                            "letters": {
+                                "default": "",
+                                "type": "string",
+                                "maxLength": 4000
                             }
                         },
                         "additionalProperties": false
@@ -3174,82 +3472,20 @@
                 "required": ["vacancyId", "parseStatus"],
                 "additionalProperties": false
             },
-            "MaterialsContent": {
+            "VacancyFetchQueued": {
                 "type": "object",
                 "properties": {
-                    "language": {
+                    "vacancyId": {
                         "type": "string",
-                        "enum": ["en", "ru"]
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
                     },
-                    "coverLetter": {
-                        "type": "string"
-                    },
-                    "emailSubject": {
-                        "type": "string"
-                    },
-                    "emailBody": {
-                        "type": "string"
-                    },
-                    "telegramMessage": {
-                        "type": "string"
-                    },
-                    "linkedinNote": {
-                        "type": "string"
-                    },
-                    "whyMe": {
-                        "type": "array",
-                        "items": {
-                            "type": "string"
-                        }
+                    "fetchStatus": {
+                        "type": "string",
+                        "enum": ["pending"]
                     }
                 },
-                "required": [
-                    "language",
-                    "coverLetter",
-                    "emailSubject",
-                    "emailBody",
-                    "telegramMessage",
-                    "linkedinNote",
-                    "whyMe"
-                ],
-                "additionalProperties": false
-            },
-            "ApplicationMaterials": {
-                "type": "object",
-                "properties": {
-                    "status": {
-                        "type": "string",
-                        "enum": ["none", "queued", "generating", "ready", "failed"]
-                    },
-                    "version": {
-                        "type": "integer",
-                        "minimum": 1,
-                        "maximum": 9007199254740991
-                    },
-                    "content": {
-                        "$ref": "#/components/schemas/MaterialsContent"
-                    },
-                    "error": {
-                        "type": "string"
-                    },
-                    "updatedAt": {
-                        "type": "string",
-                        "format": "date-time",
-                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
-                    }
-                },
-                "required": ["status"],
-                "additionalProperties": false
-            },
-            "UpdateApplication": {
-                "type": "object",
-                "properties": {
-                    "status": {
-                        "type": "string",
-                        "enum": ["new", "sent", "interview", "offer", "rejected"]
-                    }
-                },
-                "required": ["status"],
+                "required": ["vacancyId", "fetchStatus"],
                 "additionalProperties": false
             }
         }

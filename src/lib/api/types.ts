@@ -21,6 +21,11 @@ export type ApplicationVacancy = NonNullable<ApplicationDetail['vacancy']>
 export type ParsedVacancy = NonNullable<ApplicationVacancy['parsed']>
 export type VacancySalary = NonNullable<ParsedVacancy['salary']>
 export type ApplyChannel = ParsedVacancy['applyChannels'][number]
+/** The questions of the vacancy's apply form, read from its link. */
+export type ApplyForm = NonNullable<ApplicationVacancy['applyForm']>
+export type ApplyField = ApplyForm['fields'][number]
+export type ApplyFieldType = ApplyField['type']
+export type FetchStatus = ApplicationVacancy['fetchStatus']
 export type ApplicationCv = ApplicationDetail['cv']
 export type CvStatus = ApplicationCv['status']
 /** POST /applications/{id}/cv: the new version, `queued`. */
@@ -29,6 +34,8 @@ export type CvQueued = JsonOf<paths['/api/v1/applications/{id}/cv']['post']['res
 export type ApplicationMaterials = ApplicationDetail['materials']
 export type MaterialsStatus = ApplicationMaterials['status']
 export type MaterialsContent = NonNullable<ApplicationMaterials['content']>
+/** An answer to a question of the apply form, by its key. */
+export type MaterialsAnswer = MaterialsContent['answers'][number]
 /** POST /applications/{id}/materials: the new version, `queued`. */
 export type MaterialsQueued = JsonOf<paths['/api/v1/applications/{id}/materials']['post']['responses'][202]>
 /** PATCH /applications/{id}: the status set by hand. */
@@ -51,3 +58,4 @@ export type VacancyIntakeInput = {
 }
 export type VacancyIntakeResult = JsonOf<paths['/api/v1/vacancies/intake']['post']['responses'][200]>
 export type VacancyParseQueued = JsonOf<paths['/api/v1/vacancies/{id}/parse']['post']['responses'][202]>
+export type VacancyFetchQueued = JsonOf<paths['/api/v1/vacancies/{id}/fetch']['post']['responses'][202]>

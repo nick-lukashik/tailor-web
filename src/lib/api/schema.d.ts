@@ -45,7 +45,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** One of the caller's applications with its vacancy (text and parse), CV and materials status */
+        /** One of the caller's applications with its vacancy (text and parse) and CV status */
         get: operations["ApplicationsController_get_v1"];
         put?: never;
         post?: never;
@@ -157,7 +157,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Links and texts of vacancies (1–200) into the caller's pool; each new text is parsed in the background */
+        /** Links and texts of vacancies (1–200) into the caller's pool; each new link is read and each vacancy parsed in the background */
         post: operations["VacanciesController_intake_v1"];
         delete?: never;
         options?: never;
@@ -176,6 +176,23 @@ export interface paths {
         put?: never;
         /** Parses a vacancy of the caller's pool again, in the background; `pending` until then */
         post: operations["VacanciesController_reparse_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/vacancies/{id}/fetch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reads the link of a vacancy of the caller's pool again (its text when none was pasted, and the apply form), in the background */
+        post: operations["VacanciesController_refetch_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -260,6 +277,10 @@ export interface components {
             updatedAt: string;
             model: string | null;
             parsed: components["schemas"]["ParsedVacancy"] | null;
+            applyForm: components["schemas"]["ApplyForm"] | null;
+            /** @enum {string} */
+            fetchStatus: "pending" | "fetched" | "failed" | "skipped";
+            fetchError: string | null;
         };
         ParsedVacancy: {
             title: string | null;
@@ -295,6 +316,19 @@ export interface components {
             summary: string;
             warnings: string[];
         };
+        ApplyForm: {
+            /** @enum {string} */
+            source: "greenhouse" | "lever" | "ashby" | "workable" | "page";
+            fields: components["schemas"]["ApplyField"][];
+        };
+        ApplyField: {
+            key: string;
+            label: string;
+            /** @enum {string} */
+            type: "text" | "textarea" | "select" | "multiselect" | "boolean" | "file" | "other";
+            required: boolean;
+            options?: string[];
+        };
         ApplicationCv: {
             /** @enum {string} */
             status: "none" | "queued" | "generating" | "ready" | "failed";
@@ -305,6 +339,35 @@ export interface components {
             error?: string;
             /** Format: date-time */
             updatedAt?: string;
+        };
+        ApplicationMaterials: {
+            /** @enum {string} */
+            status: "none" | "queued" | "generating" | "ready" | "failed";
+            version?: number;
+            content?: components["schemas"]["MaterialsContent"];
+            error?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        MaterialsContent: {
+            /** @enum {string} */
+            language: "en" | "ru";
+            coverLetter: string;
+            emailSubject: string;
+            emailBody: string;
+            telegramMessage: string;
+            linkedinNote: string;
+            whyMe: string[];
+            /** @default [] */
+            answers: {
+                key: string;
+                label: string;
+                answer: string;
+            }[];
+        };
+        UpdateApplication: {
+            /** @enum {string} */
+            status: "new" | "sent" | "interview" | "offer" | "rejected";
         };
         CreateApplication: {
             company: string;
@@ -696,6 +759,8 @@ export interface components {
             promptAdditions: {
                 /** @default  */
                 cv: string;
+                /** @default  */
+                letters: string;
             };
         };
         SavedProfile: {
@@ -731,28 +796,11 @@ export interface components {
             /** @enum {string} */
             parseStatus: "pending";
         };
-        MaterialsContent: {
+        VacancyFetchQueued: {
+            /** Format: uuid */
+            vacancyId: string;
             /** @enum {string} */
-            language: "en" | "ru";
-            coverLetter: string;
-            emailSubject: string;
-            emailBody: string;
-            telegramMessage: string;
-            linkedinNote: string;
-            whyMe: string[];
-        };
-        ApplicationMaterials: {
-            /** @enum {string} */
-            status: "none" | "queued" | "generating" | "ready" | "failed";
-            version?: number;
-            content?: components["schemas"]["MaterialsContent"];
-            error?: string;
-            /** Format: date-time */
-            updatedAt?: string;
-        };
-        UpdateApplication: {
-            /** @enum {string} */
-            status: "new" | "sent" | "interview" | "offer" | "rejected";
+            fetchStatus: "pending";
         };
     };
     responses: never;
@@ -1752,6 +1800,93 @@ export interface operations {
             };
             /** @description Not found (NOT_FOUND) */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Internal error (INTERNAL) */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description A dependency (Postgres, tailor-tex) over its time budget or unavailable, retry later (UNAVAILABLE) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Request over its budget, 10 s unless the route says otherwise (TIMEOUT) */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    VacanciesController_refetch_v1: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Echoed back; generated when absent */
+                "x-request-id"?: string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VacancyFetchQueued"];
+                };
+            };
+            /** @description No valid access token (UNAUTHORIZED) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token lacks the tailor role (FORBIDDEN) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not found (NOT_FOUND) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Conflicts with the current state (CONFLICT) */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

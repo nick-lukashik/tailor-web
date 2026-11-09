@@ -228,6 +228,60 @@ describe('detailInProgress', () => {
     })
 })
 
+describe('detailInProgress and the vacancy', () => {
+    const vacancy: NonNullable<ApplicationDetail['vacancy']> = {
+        id: 'v',
+        url: 'https://example.com/jobs/1',
+        rawText: '',
+        parseStatus: 'parsed',
+        parseError: null,
+        updatedAt: '2026-11-09T10:00:00.000Z',
+        model: null,
+        parsed: null,
+        applyForm: null,
+        fetchStatus: 'fetched',
+        fetchError: null,
+    }
+    it.each([
+        [
+            {
+                fetchStatus: 'pending',
+            },
+            true,
+        ],
+        [
+            {
+                parseStatus: 'pending',
+            },
+            true,
+        ],
+        [
+            {
+                fetchStatus: 'failed',
+            },
+            false,
+        ],
+        [
+            {},
+            false,
+        ],
+    ] as [
+        Partial<NonNullable<ApplicationDetail['vacancy']>>,
+        boolean,
+    ][])('%j → %s', (changes, polls) => {
+        expect(
+            detailInProgress(
+                detail({
+                    vacancy: {
+                        ...vacancy,
+                        ...changes,
+                    },
+                }),
+            ),
+        ).toBe(polls)
+    })
+})
+
 describe('rowInProgress', () => {
     it.each([
         [

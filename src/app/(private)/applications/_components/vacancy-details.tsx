@@ -4,20 +4,24 @@ import { useMutation } from '@tanstack/react-query'
 import { Loader2Icon } from 'lucide-react'
 import { useFormatter, useTranslations } from 'next-intl'
 import { type ReactNode } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { browserApi } from '@/lib/api/browser'
 import { type ApplicationVacancy, type ParsedVacancy } from '@/lib/api/types'
 import { vacancyMutations } from '@/lib/api/vacancies'
 import { cn } from '@/lib/utils'
+import { apiErrorMessage } from './api-error-message'
 import { languageCode, parseProblem, salaryText } from './vacancy-format'
 
 /**
- * What was read from the vacancy. While it is `pending` the page polls
- * (applicationQueries.detail); a failed one can be read again.
+ * What was read from the vacancy. While its page or its text is `pending`
+ * the page polls (applicationQueries.detail); a failed one can be read again.
  */
 export function VacancyDetails({ vacancy }: { vacancy: ApplicationVacancy }) {
     const t = useTranslations('applications.vacancy')
+    const reading =
+        vacancy.fetchStatus === 'pending' ? 'fetching' : vacancy.parseStatus === 'pending' ? 'pending' : null
     return (
         <section
             aria-labelledby="vacancy-title"
@@ -29,7 +33,7 @@ export function VacancyDetails({ vacancy }: { vacancy: ApplicationVacancy }) {
             >
                 {t('title')}
             </h2>
-            {vacancy.parseStatus === 'pending' && (
+            {reading && (
                 <p
                     role="status"
                     className="flex items-center gap-2 text-muted-foreground"
@@ -38,9 +42,10 @@ export function VacancyDetails({ vacancy }: { vacancy: ApplicationVacancy }) {
                         aria-hidden="true"
                         className="size-4 animate-spin motion-reduce:animate-none"
                     />
-                    {t('pending')}
+                    {t(reading)}
                 </p>
             )}
+            {vacancy.fetchStatus === 'failed' && <FetchFailed vacancyId={vacancy.id} />}
             {vacancy.parseStatus === 'pending' && (
                 <div
                     aria-hidden="true"
@@ -54,6 +59,38 @@ export function VacancyDetails({ vacancy }: { vacancy: ApplicationVacancy }) {
             {vacancy.parseStatus === 'failed' && <ParseFailed vacancy={vacancy} />}
             {vacancy.parseStatus === 'parsed' && vacancy.parsed && <Parsed parsed={vacancy.parsed} />}
         </section>
+    )
+}
+
+/** The link could not be read (its apply form neither): a quiet note, the vacancy may still be read from its text. */
+function FetchFailed({ vacancyId }: { vacancyId: string }) {
+    const t = useTranslations('applications.vacancy')
+    const refetch = useMutation(vacancyMutations.refetch(browserApi))
+    return (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 text-sm text-muted-foreground">
+            <p>{t('fetchFailed')}</p>
+            <Button
+                variant="outline"
+                size="sm"
+                aria-busy={refetch.isPending || undefined}
+                aria-disabled={refetch.isPending || undefined}
+                onClick={() => {
+                    if (refetch.isPending) return
+                    refetch.mutate(vacancyId, {
+                        onSuccess: () => toast.success(t('fetchStarted')),
+                        onError: error => toast.error(apiErrorMessage(error, t('readAgainFailed'))),
+                    })
+                }}
+            >
+                {refetch.isPending && (
+                    <Loader2Icon
+                        aria-hidden="true"
+                        className="animate-spin motion-reduce:animate-none"
+                    />
+                )}
+                {refetch.isPending ? t('reading') : t('fetchAgain')}
+            </Button>
+        </div>
     )
 }
 

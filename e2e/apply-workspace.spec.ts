@@ -165,12 +165,16 @@ test.describe('applying by hand', () => {
             }),
         ).toHaveAttribute('href', CV_URL)
 
-        await page
-            .getByRole('button', {
-                name: `Copy ${workspace.cvLink}`,
-            })
-            .click()
-        expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(CV_URL)
+        // One on top, one at the apply form's file field.
+        const copyCv = page.getByRole('button', {
+            name: `Copy ${workspace.cvLink}`,
+        })
+        await expect(copyCv).toHaveCount(2)
+        for (const button of await copyCv.all()) {
+            await page.evaluate(() => navigator.clipboard.writeText(''))
+            await button.click()
+            expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(CV_URL)
+        }
 
         await page
             .getByRole('tab', {

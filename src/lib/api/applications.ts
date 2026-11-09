@@ -17,10 +17,11 @@ export const DETAIL_POLL_MS = 5_000
 
 const running = (status: string) => status === 'queued' || status === 'generating'
 
-/** Still in the works on the API (the vacancy read, the CV or the messages written): the page keeps asking. */
+/** Still in the works on the API (the vacancy page or text read, the CV or the messages written): the page keeps asking. */
 export function detailInProgress(application: Pick<ApplicationDetail, 'vacancy' | 'cv' | 'materials'>): boolean {
     return (
         application.vacancy?.parseStatus === 'pending'
+        || application.vacancy?.fetchStatus === 'pending'
         || running(application.cv.status)
         || running(application.materials.status)
     )

@@ -13,13 +13,15 @@ type Props = {
     name: string
     /** Only the icon (a value in a list); otherwise the icon and "Copy". */
     iconOnly?: boolean
+    /** The button's own words instead of "Copy" (they name it too). */
+    label?: string
     variant?: 'default' | 'outline' | 'ghost'
 }
 
 const COPIED_MS = 2_000
 
 /** One click puts the text on the clipboard; a toast and a check mark say it worked. */
-export function CopyButton({ text, name, iconOnly = false, variant = 'outline' }: Props) {
+export function CopyButton({ text, name, iconOnly = false, label, variant = 'outline' }: Props) {
     const t = useTranslations('applications.copy')
     const [copied, setCopied] = useState(false)
     useEffect(() => {
@@ -49,11 +51,11 @@ export function CopyButton({ text, name, iconOnly = false, variant = 'outline' }
             variant={variant}
             size={iconOnly ? 'icon-sm' : 'sm'}
             onClick={copy}
-            aria-label={accessibleName}
+            aria-label={label && !iconOnly ? undefined : accessibleName}
             title={iconOnly ? accessibleName : undefined}
         >
             <Icon aria-hidden="true" />
-            {!iconOnly && t('copy')}
+            {!iconOnly && (label ?? t('copy'))}
         </Button>
     )
 }
