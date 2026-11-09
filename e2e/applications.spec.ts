@@ -56,7 +56,12 @@ test.describe('applications', () => {
             }),
         ).toBeVisible()
         await expect(page).toHaveTitle(`${application.company}: Engineer · ${en.meta.siteName}`)
-        await expect(page.getByText(en.applications.status.new)).toBeVisible()
+        await expect(
+            page.getByRole('button', {
+                name: en.applications.status.new,
+                pressed: true,
+            }),
+        ).toBeVisible()
         // The text sits in "Original text", closed until asked for.
         const text = page.getByText('Written by Playwright for the application page.')
         await expect(text).toBeHidden()

@@ -5,11 +5,18 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import en from '@/i18n/messages/en.json'
 import { applicationKeys } from '@/lib/api/applications'
-import { type ApplicationCv, type ApplicationDetail, type ParsedVacancy } from '@/lib/api/types'
+import {
+    type ApplicationCv,
+    type ApplicationDetail,
+    type ApplicationMaterials,
+    type MaterialsContent,
+    type ParsedVacancy,
+} from '@/lib/api/types'
 import { ApplicationCvBlock } from './application-cv'
+import { ApplicationMessages } from './application-messages'
 import { ApplicationView } from './application-view'
 
-const { vacancy: text, detail, cv: cvText } = en.applications
+const { vacancy: text, detail, cv: cvText, messages, workspace, stage } = en.applications
 
 /** How React escapes text in HTML (the apostrophe of "Couldn't read"). */
 const escaped = (value: string) => value.replaceAll("'", '&#x27;')
@@ -71,6 +78,7 @@ const base: ApplicationDetail = {
     vacancyId: 'vacancy-1',
     parseStatus: 'parsed',
     cvStatus: 'none',
+    materialsStatus: 'none',
     createdAt: '2026-11-02T10:00:00.000Z',
     vacancy: {
         id: 'vacancy-1',
@@ -84,6 +92,38 @@ const base: ApplicationDetail = {
     },
     cv: {
         status: 'none',
+    },
+    materials: {
+        status: 'none',
+    },
+}
+
+const CV_URL = 'https://cv.example.com/application-1/Alex-Engineer-CV.pdf'
+const content: MaterialsContent = {
+    language: 'en',
+    coverLetter: 'Dear team,\n\nI would like to apply.',
+    emailSubject: 'Backend engineer: Alex Example',
+    emailBody: `Hello,\n\nMy CV: ${CV_URL}`,
+    telegramMessage: `Hi! CV: ${CV_URL}`,
+    linkedinNote: 'Hi, glad to connect.',
+    whyMe: [
+        'Five years of TypeScript',
+    ],
+}
+/** Ready to send: the CV and the messages are made. */
+const ready: ApplicationDetail = {
+    ...base,
+    cvStatus: 'ready',
+    materialsStatus: 'ready',
+    cv: {
+        status: 'ready',
+        version: 1,
+        url: CV_URL,
+    },
+    materials: {
+        status: 'ready',
+        version: 1,
+        content,
     },
 }
 
@@ -258,7 +298,7 @@ describe('ApplicationCvBlock', () => {
         expect(html).not.toContain('<button')
     })
 
-    it('links the ready CV in a new tab, with its details and "Generate again"', () => {
+    it('shows the details of a ready CV and "Generate again" (the link is in the header)', () => {
         const html = render({
             status: 'ready',
             version: 2,
@@ -266,20 +306,17 @@ describe('ApplicationCvBlock', () => {
             pages: 2,
             model: 'model-a',
         })
-        expect(html).toContain(`href="${URL}"`)
-        expect(html).toContain('target="_blank"')
-        expect(html).toContain(`>${cvText.open}</a>`)
+        expect(html).not.toContain('<a')
         expect(html).toContain('>Version 2 · 2 pages · Made by model-a</p>')
         expect(html).toContain(`>${cvText.again}</button>`)
     })
 
-    it('shows no link for a ready CV without an address', () => {
+    it('shows the details of a ready CV without an address', () => {
         const html = render({
             status: 'ready',
             version: 1,
             pages: 1,
         })
-        expect(html).not.toContain('<a')
         expect(html).toContain('>Version 1 · 1 page</p>')
     })
 
@@ -306,14 +343,157 @@ describe('ApplicationCvBlock', () => {
         expect(html).toContain(`>${cvText.retry}</button>`)
         expect(html).not.toContain('<a')
     })
+})
+
+describe('ApplyHeader', () => {
+    it('opens the vacancy and the CV, copies the CV link and offers "Mark as sent"', () => {
+        const html = renderView(ready)
+        expect(html).toContain(`>${stage.ready}</span>`)
+        expect(html).toMatch(new RegExp(`<a[^>]*href="${CV_URL}"[^>]*target="_blank"`))
+        expect(html).toContain(`${cvText.open}</a>`)
+        expect(html).toContain(`aria-label="Copy ${workspace.cvLink}"`)
+        expect(html).toContain(`${workspace.markSent}</button>`)
+        expect(html).toContain(`>${detail.vacancyLink}</a>`)
+    })
+
+    it('presses the current status and has no "Mark as sent" once sent', () => {
+        const html = renderView({
+            ...ready,
+            status: 'sent',
+        })
+        expect(html).toMatch(new RegExp(`<button[^>]*aria-pressed="true"[^>]*>${en.applications.status.sent}</button>`))
+        expect(html).toMatch(new RegExp(`<button[^>]*aria-pressed="false"[^>]*>${en.applications.status.new}</button>`))
+        expect(html).not.toContain(workspace.markSent)
+    })
 
     it('keeps the older ready CV linked when a newer one failed', () => {
+        const html = renderView({
+            ...ready,
+            cvStatus: 'failed',
+            cv: {
+                status: 'failed',
+                version: 2,
+                url: CV_URL,
+                error: 'llm_bad_request',
+            },
+        })
+        expect(html).toContain(`href="${CV_URL}"`)
+        expect(html).toContain(`>${stage.failed}</span>`)
+    })
+
+    it('links no CV and offers no "Mark as sent" before there is one', () => {
+        const html = renderView(base)
+        expect(html).not.toContain(cvText.open)
+        expect(html).not.toContain(workspace.markSent)
+    })
+})
+
+describe('ApplicationMessages', () => {
+    const render = (materials: ApplicationMaterials, changes: Partial<ApplicationDetail> = {}) =>
+        renderToStaticMarkup(
+            withIntl(
+                <ApplicationMessages
+                    application={{
+                        ...ready,
+                        materials,
+                        ...changes,
+                    }}
+                />,
+            ),
+        )
+
+    it('opens on the e-mail the vacancy asks for, with copy buttons, the subject length and a mailto link', () => {
+        const html = render(ready.materials)
+        expect(html).toMatch(/role="tablist"[^>]*aria-label="Message type"/)
+        for (const tab of [
+            messages.email,
+            messages.telegram,
+            messages.linkedin,
+            messages.coverLetter,
+            messages.whyMe,
+        ])
+            expect(html).toContain(`>${tab}</button>`)
+        expect(html).toMatch(new RegExp(`role="tab"[^>]*aria-selected="true"[^>]*>${messages.email}</button>`))
+        expect(html).toContain('>Backend engineer: Alex Example</div>')
+        expect(html).toContain(`aria-label="Copy ${messages.subject}"`)
+        expect(html).toContain(`aria-label="Copy ${messages.body}"`)
+        expect(html).toContain(`>${content.emailSubject.length} / 150</span>`)
+        expect(html).toContain('href="mailto:jobs@example.com?subject=Backend%20engineer%3A%20Alex%20Example&amp;body=')
+        expect(html).toContain(`${messages.regenerate}</button>`)
+        expect(html).toContain('Version 1')
+    })
+
+    it('opens on Telegram when the vacancy has no e-mail', () => {
+        const html = render(ready.materials, {
+            vacancy: base.vacancy
+                ? {
+                      ...base.vacancy,
+                      parsed: {
+                          ...parsed,
+                          applyChannels: [
+                              {
+                                  kind: 'telegram',
+                                  value: '@example_jobs',
+                              },
+                          ],
+                      },
+                  }
+                : null,
+        })
+        expect(html).toMatch(new RegExp(`role="tab"[^>]*aria-selected="true"[^>]*>${messages.telegram}</button>`))
+        expect(html).toContain(`>${content.telegramMessage.length} / 600</span>`)
+    })
+
+    it('shows placeholders while the first version is written, with no button', () => {
+        const html = render({
+            status: 'generating',
+            version: 1,
+        })
+        expect(html).toContain(`>${messages.generating}</p>`)
+        expect(html).toContain('data-slot="skeleton"')
+        expect(html).not.toContain('role="tablist"')
+        expect(html).not.toContain('<button')
+    })
+
+    it('keeps the texts while a newer version is written', () => {
+        const html = render({
+            status: 'queued',
+            version: 2,
+            content,
+        })
+        expect(html).toContain(messages.generatingNewer)
+        expect(html).toContain('role="tablist"')
+        expect(html).not.toContain(messages.regenerate)
+    })
+
+    it('explains a failure and offers to try again', () => {
         const html = render({
             status: 'failed',
-            version: 2,
-            url: URL,
-            error: 'llm_bad_request',
+            version: 1,
+            error: 'no_profile',
         })
-        expect(html).toContain(`href="${URL}"`)
+        expect(html).toMatch(new RegExp(`role="alert"[^>]*>${messages.problem.noProfile}</p>`))
+        expect(html).toContain(`${messages.retry}</button>`)
+    })
+
+    it('offers to write them once the CV is ready, and waits for it before', () => {
+        expect(
+            render({
+                status: 'none',
+            }),
+        ).toContain(`>${messages.generate}</button>`)
+        const waiting = render(
+            {
+                status: 'none',
+            },
+            {
+                cv: {
+                    status: 'generating',
+                    version: 1,
+                },
+            },
+        )
+        expect(waiting).toContain(`>${messages.waitingCv}</p>`)
+        expect(waiting).not.toContain('<button')
     })
 })
