@@ -70,6 +70,7 @@ const base: ApplicationDetail = {
     status: 'new',
     vacancyId: 'vacancy-1',
     parseStatus: 'parsed',
+    cvStatus: 'none',
     createdAt: '2026-11-02T10:00:00.000Z',
     vacancy: {
         id: 'vacancy-1',
@@ -87,20 +88,30 @@ const base: ApplicationDetail = {
 }
 
 const withIntl = (node: ReactNode) => (
-    <NextIntlClientProvider
-        locale="en"
-        messages={en}
-        timeZone="UTC"
-    >
-        {node}
-    </NextIntlClientProvider>
+    <QueryClientProvider client={new QueryClient()}>
+        <NextIntlClientProvider
+            locale="en"
+            messages={en}
+            timeZone="UTC"
+        >
+            {node}
+        </NextIntlClientProvider>
+    </QueryClientProvider>
 )
 
 function renderView(application: ApplicationDetail) {
     const client = new QueryClient()
     client.setQueryData(applicationKeys.detail(application.id), application)
     return renderToStaticMarkup(
-        <QueryClientProvider client={client}>{withIntl(<ApplicationView id={application.id} />)}</QueryClientProvider>,
+        <QueryClientProvider client={client}>
+            <NextIntlClientProvider
+                locale="en"
+                messages={en}
+                timeZone="UTC"
+            >
+                <ApplicationView id={application.id} />
+            </NextIntlClientProvider>
+        </QueryClientProvider>,
     )
 }
 
@@ -185,11 +196,22 @@ describe('ApplicationView', () => {
         expect(html).toContain(`>${text.readAgain}</button>`)
     })
 
-    it('says "CV not generated yet" and links no CV', () => {
+    it('offers to generate the CV of a read vacancy and links no CV', () => {
         const html = renderView(base)
-        expect(html).toContain(`>${cvText.none}</p>`)
+        expect(html).toContain(`>${cvText.generate}</button>`)
         expect(html).not.toContain(cvText.open)
         expect(html).not.toMatch(/href="[^"]*\/cv/)
+    })
+
+    it('says the CV comes after the vacancy is read', () => {
+        const html = renderView(
+            withVacancy({
+                parseStatus: 'pending',
+                parsed: null,
+            }),
+        )
+        expect(html).toContain(`>${cvText.waiting}</p>`)
+        expect(html).not.toContain(cvText.generate)
     })
 
     it('shows the text of an application added by hand, without a vacancy', () => {
@@ -204,36 +226,94 @@ describe('ApplicationView', () => {
         expect(html).toContain('>Hand Ltd</h1>')
         expect(html).toContain('Typed by hand.')
         expect(html).not.toContain('id="vacancy-title"')
+        expect(html).toContain(`>${cvText.noVacancy}</p>`)
     })
 })
 
 describe('ApplicationCvBlock', () => {
-    const render = (cv: ApplicationCv) => renderToStaticMarkup(withIntl(<ApplicationCvBlock cv={cv} />))
+    const URL = 'https://cv.example.com/application-1/Alex-Engineer-CV.pdf'
+    const render = (cv: ApplicationCv) =>
+        renderToStaticMarkup(
+            withIntl(
+                <ApplicationCvBlock
+                    applicationId="application-1"
+                    cv={cv}
+                    vacancy={{
+                        parseStatus: 'parsed',
+                    }}
+                />,
+            ),
+        )
 
-    it('links nothing until the CV is ready', () => {
-        expect(
-            render({
-                status: 'none',
-            }),
-        ).not.toContain('<a')
-        expect(
-            render({
-                status: 'generating',
-            }),
-        ).toContain(cvText.generating)
-        expect(
-            render({
-                status: 'ready',
-            }),
-        ).not.toContain('<a')
+    it.each([
+        'queued',
+        'generating',
+    ] as const)('says the CV is being generated while %s, with no button', status => {
+        const html = render({
+            status,
+            version: 1,
+        })
+        expect(html).toContain(cvText.generating)
+        expect(html).not.toContain('<a')
+        expect(html).not.toContain('<button')
     })
 
-    it('links the ready CV by the address tailor-api gives', () => {
+    it('links the ready CV in a new tab, with its details and "Generate again"', () => {
         const html = render({
             status: 'ready',
-            url: 'https://cv.example.com/application-1/Alex-Engineer-CV.pdf',
+            version: 2,
+            url: URL,
+            pages: 2,
+            model: 'model-a',
         })
-        expect(html).toContain('href="https://cv.example.com/application-1/Alex-Engineer-CV.pdf"')
+        expect(html).toContain(`href="${URL}"`)
+        expect(html).toContain('target="_blank"')
         expect(html).toContain(`>${cvText.open}</a>`)
+        expect(html).toContain('>Version 2 · 2 pages · Made by model-a</p>')
+        expect(html).toContain(`>${cvText.again}</button>`)
+    })
+
+    it('shows no link for a ready CV without an address', () => {
+        const html = render({
+            status: 'ready',
+            version: 1,
+            pages: 1,
+        })
+        expect(html).not.toContain('<a')
+        expect(html).toContain('>Version 1 · 1 page</p>')
+    })
+
+    it.each([
+        [
+            'storage_not_configured',
+            cvText.problem.notConfigured,
+        ],
+        [
+            'llm_timeout',
+            cvText.problem.model,
+        ],
+        [
+            'tex_unavailable',
+            cvText.problem.failed,
+        ],
+    ])('explains a failure (%s) and offers to try again', (error, message) => {
+        const html = render({
+            status: 'failed',
+            version: 1,
+            error,
+        })
+        expect(html).toContain(`>${escaped(message)}</p>`)
+        expect(html).toContain(`>${cvText.retry}</button>`)
+        expect(html).not.toContain('<a')
+    })
+
+    it('keeps the older ready CV linked when a newer one failed', () => {
+        const html = render({
+            status: 'failed',
+            version: 2,
+            url: URL,
+            error: 'llm_bad_request',
+        })
+        expect(html).toContain(`href="${URL}"`)
     })
 })

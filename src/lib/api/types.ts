@@ -22,6 +22,9 @@ export type ParsedVacancy = NonNullable<ApplicationVacancy['parsed']>
 export type VacancySalary = NonNullable<ParsedVacancy['salary']>
 export type ApplyChannel = ParsedVacancy['applyChannels'][number]
 export type ApplicationCv = ApplicationDetail['cv']
+export type CvStatus = ApplicationCv['status']
+/** POST /applications/{id}/cv: the new version, `queued`. */
+export type CvQueued = JsonOf<paths['/api/v1/applications/{id}/cv']['post']['responses'][202]>
 export type ListApplicationsQuery = NonNullable<paths['/api/v1/applications']['get']['parameters']['query']>
 export type CreateApplicationInput = JsonOf<paths['/api/v1/applications']['post']['requestBody']>
 

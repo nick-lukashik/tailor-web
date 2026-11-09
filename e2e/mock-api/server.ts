@@ -19,9 +19,14 @@
 // vacancies stay `pending` until POST /__mock/vacancies/<id> {"parseStatus": "parsed"
 // | "failed", "parseError"?} settles one. POST /api/v1/vacancies/<id>/parse (202)
 // reads one again: after MOCK_PARSE_MS it is `failed` with `no_text` without a
-// text, else `parsed`. GET /api/v1/applications/<id> adds the vacancy and `cv`
-// (always `none`). Seed: application-010 is parsed, 009 failed with no text,
-// 008 pending, 007 failed with a text.
+// text, else `parsed`. GET /api/v1/applications/<id> adds the vacancy and `cv`;
+// list rows carry `cvStatus`. A parse (the reparse or the settle hook) queues CV
+// version 1 for its applications without one, as tailor-api does; POST
+// /api/v1/applications/<id>/cv (202) queues the next (409 while one is queued or
+// generating, or the vacancy is not parsed). A version is `generating` after
+// MOCK_CV_MS and `ready` with a cv.example.com link after as long again. Seed:
+// application-010 is parsed (no CV yet), 009 failed with no text, 008 pending, 007
+// failed with a text.
 import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
@@ -74,6 +79,15 @@ type ParsedVacancy = {
     summary: string
     warnings: string[]
 }
+type CvVersion = {
+    version: number
+    status: 'queued' | 'generating' | 'ready' | 'failed'
+    model: string | null
+    error: string | null
+    pages: number | null
+    fileName: string | null
+    updatedAt: string
+}
 type Vacancy = {
     id: string
     url: string | null
@@ -100,11 +114,15 @@ type Received = {
 const port = Number(process.env.PORT ?? 4000)
 const createDelayMs = Number(process.env.MOCK_DELAY_MS ?? 400)
 const parseDelayMs = Number(process.env.MOCK_PARSE_MS ?? 300)
+const cvStepMs = Number(process.env.MOCK_CV_MS ?? 300)
+const CV_PUBLIC_URL = 'https://cv.example.com'
 const MOCK_MODEL = 'mock-model'
 const openapi = readFileSync(new URL('./openapi.json', import.meta.url), 'utf8')
 
 let applications: Application[] = []
 let vacancies = new Map<string, Vacancy>()
+/** CV versions per application, oldest first. */
+let cvs = new Map<string, CvVersion[]>()
 let received: Received[] = []
 type StoredProfile = {
     version: number
@@ -290,21 +308,97 @@ function newVacancy(url: string | null, rawText: string): Vacancy {
     return vacancy
 }
 
-/** The application as the API answers it: its parse status is its vacancy's. */
-function row(application: Application): Application {
+/** Queues a new CV version; as the job would, it is `generating`, then `ready`. */
+function queueCv(applicationId: string): CvVersion {
+    const versions = cvs.get(applicationId) ?? []
+    const cv: CvVersion = {
+        version: versions.length + 1,
+        status: 'queued',
+        model: null,
+        error: null,
+        pages: null,
+        fileName: null,
+        updatedAt: new Date().toISOString(),
+    }
+    cvs.set(applicationId, [
+        ...versions,
+        cv,
+    ])
+    setTimeout(() => {
+        if (cv.status !== 'queued') return
+        cv.status = 'generating'
+        cv.model = MOCK_MODEL
+        cv.updatedAt = new Date().toISOString()
+        setTimeout(() => {
+            if (cv.status !== 'generating') return
+            cv.status = 'ready'
+            cv.pages = 2
+            cv.fileName = MOCK_CV_FILE_NAME
+            cv.updatedAt = new Date().toISOString()
+        }, cvStepMs)
+    }, cvStepMs)
+    return cv
+}
+
+/** After a parse: version 1 for every application of the vacancy without a CV. */
+function queueFirstCvs(vacancy: Vacancy) {
+    if (vacancy.parseStatus !== 'parsed') return
+    for (const application of applications) {
+        if (application.vacancyId === vacancy.id && !cvs.has(application.id)) queueCv(application.id)
+    }
+}
+
+/** The newest version's status, model and error; the link and pages of the newest ready one. */
+function cvOf(applicationId: string) {
+    const versions = cvs.get(applicationId) ?? []
+    const latest = versions.at(-1)
+    if (!latest)
+        return {
+            status: 'none' as const,
+        }
+    const ready = versions.findLast(version => version.status === 'ready')
+    return {
+        status: latest.status,
+        version: latest.version,
+        ...(ready?.fileName
+            ? {
+                  url: `${CV_PUBLIC_URL}/${applicationId}/${ready.fileName}`,
+              }
+            : {}),
+        ...(ready?.pages
+            ? {
+                  pages: ready.pages,
+              }
+            : {}),
+        ...(latest.model
+            ? {
+                  model: latest.model,
+              }
+            : {}),
+        ...(latest.error
+            ? {
+                  error: latest.error,
+              }
+            : {}),
+        updatedAt: latest.updatedAt,
+    }
+}
+
+/** The application as the API answers it: its parse status is its vacancy's, its CV status the newest version's. */
+function row(application: Application) {
     const vacancy = application.vacancyId ? vacancies.get(application.vacancyId) : undefined
-    return vacancy
-        ? {
-              ...application,
-              parseStatus: vacancy.parseStatus,
-          }
-        : application
+    return {
+        ...application,
+        parseStatus: vacancy ? vacancy.parseStatus : application.parseStatus,
+        cvStatus: cvOf(application.id).status,
+    }
 }
 
 function seed() {
     received = []
     profiles = new Map()
     vacancies = new Map()
+    cvs = new Map()
     const start = Date.parse('2026-10-01T09:00:00.000Z')
     applications = Array.from(
         {
@@ -464,6 +558,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
         if (!vacancy || (body?.parseStatus !== 'parsed' && body?.parseStatus !== 'failed'))
             return fail(res, 404, 'NOT_FOUND', 'No such vacancy or status', requestId)
         settle(vacancy, body.parseStatus, typeof body.parseError === 'string' ? body.parseError : null)
+        queueFirstCvs(vacancy)
         return send(res, 204, undefined, requestId)
     }
 
@@ -597,9 +692,30 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
             {
                 ...row(application),
                 vacancy: (application.vacancyId && vacancies.get(application.vacancyId)) || null,
-                cv: {
-                    status: 'none',
-                },
+                cv: cvOf(application.id),
+            },
+            requestId,
+        )
+    }
+
+    const generateCv = path.match(/^\/api\/v1\/applications\/([^/]+)\/cv$/)
+    if (method === 'POST' && generateCv) {
+        const id = decodeURIComponent(generateCv[1] ?? '')
+        const application = applications.find(item => item.id === id)
+        if (!application) return fail(res, 404, 'NOT_FOUND', 'Application not found', requestId)
+        if (row(application).parseStatus !== 'parsed')
+            return fail(res, 409, 'CONFLICT', 'The vacancy is not parsed yet: its CV is made once it is', requestId)
+        const latest = cvs.get(id)?.at(-1)
+        if (latest?.status === 'queued' || latest?.status === 'generating')
+            return fail(res, 409, 'CONFLICT', 'A CV of this application is already being made', requestId)
+        const cv = queueCv(id)
+        return send(
+            res,
+            202,
+            {
+                status: 'queued',
+                version: cv.version,
+                updatedAt: cv.updatedAt,
             },
             requestId,
         )
@@ -617,6 +733,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
             if (vacancy.parseStatus !== 'pending') return
             if (vacancy.rawText === '') settle(vacancy, 'failed', 'no_text')
             else settle(vacancy, 'parsed')
+            queueFirstCvs(vacancy)
         }, parseDelayMs)
         return send(
             res,
@@ -703,7 +820,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
             application,
             ...applications,
         ]
-        return send(res, 201, application, requestId)
+        return send(res, 201, row(application), requestId)
     }
 
     if (method === 'POST' && path === '/api/v1/vacancies/intake') {

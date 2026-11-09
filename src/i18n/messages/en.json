@@ -104,9 +104,30 @@
         },
         "cv": {
             "title": "CV",
-            "none": "CV not generated yet.",
-            "generating": "Making the CV…",
-            "open": "CV (PDF)"
+            "waiting": "CV will be generated after the vacancy is read.",
+            "noVacancy": "A CV is made from a vacancy, and this application has none.",
+            "generate": "Generate CV",
+            "generating": "Generating CV…",
+            "starting": "Starting…",
+            "startFailed": "Couldn't start. Try again.",
+            "open": "Open CV",
+            "version": "Version {version}",
+            "pages": "{pages, plural, one {# page} other {# pages}}",
+            "model": "Made by {model}",
+            "again": "Generate again",
+            "retry": "Try again",
+            "problem": {
+                "notConfigured": "CV generation isn't set up yet.",
+                "model": "The model couldn't finish.",
+                "noProfile": "Fill in your profile first.",
+                "doesNotFit": "The CV didn't fit its pages.",
+                "failed": "Generation failed."
+            },
+            "badge": {
+                "ready": "CV ready",
+                "generating": "Generating CV",
+                "failed": "CV failed"
+            }
         },
         "untitled": "Untitled vacancy",
         "parse": {

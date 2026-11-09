@@ -14,6 +14,7 @@ const base: Application = {
     status: 'new',
     vacancyId: null,
     parseStatus: null,
+    cvStatus: 'none',
     createdAt: '2026-11-02T10:00:00.000Z',
 }
 
@@ -90,5 +91,40 @@ describe('ApplicationItem', () => {
         })
         expect(html).not.toContain(en.applications.parse.pending)
         expect(html).not.toContain(escaped(en.applications.parse.failed))
+    })
+
+    it.each([
+        [
+            'ready',
+            en.applications.cv.badge.ready,
+        ],
+        [
+            'queued',
+            en.applications.cv.badge.generating,
+        ],
+        [
+            'generating',
+            en.applications.cv.badge.generating,
+        ],
+        [
+            'failed',
+            en.applications.cv.badge.failed,
+        ],
+    ] as const)('shows the %s CV state', (cvStatus, label) => {
+        expect(
+            render({
+                cvStatus,
+            }),
+        ).toContain(`>${label}</span>`)
+    })
+
+    it('shows no CV state before the first version, and links no CV', () => {
+        const html = render({})
+        for (const label of Object.values(en.applications.cv.badge)) expect(html).not.toContain(label)
+        expect(
+            render({
+                cvStatus: 'ready',
+            }),
+        ).not.toContain('cv.example.com')
     })
 })

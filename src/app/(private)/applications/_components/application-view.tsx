@@ -15,7 +15,7 @@ import { httpUrl } from './vacancy-format'
 
 /**
  * The application from the hydrated cache; refetches in the background when
- * stale, and every few seconds while its vacancy is being read.
+ * stale, and every few seconds while its vacancy is read or its CV made.
  */
 export function ApplicationView({ id }: { id: string }) {
     const t = useTranslations('applications.detail')
@@ -83,7 +83,11 @@ export function ApplicationView({ id }: { id: string }) {
             ) : (
                 !vacancy && <p className="text-muted-foreground">{t('emptyVacancyText')}</p>
             )}
-            <ApplicationCvBlock cv={application.cv} />
+            <ApplicationCvBlock
+                applicationId={application.id}
+                cv={application.cv}
+                vacancy={vacancy}
+            />
         </article>
     )
 }

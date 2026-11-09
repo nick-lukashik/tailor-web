@@ -6,6 +6,8 @@ export const contractErrorCodes = [
     /** Signed in, but the token lacks the `tailor` role (or a cross-site write). */
     'FORBIDDEN',
     'NOT_FOUND',
+    /** Conflicts with the current state, e.g. a CV is already being made. */
+    'CONFLICT',
     'RATE_LIMITED',
     'INTERNAL',
 ] as const
@@ -89,6 +91,7 @@ function codeForStatus(status: number): ApiErrorCode {
     if (status === 401) return 'UNAUTHORIZED'
     if (status === 403) return 'FORBIDDEN'
     if (status === 404) return 'NOT_FOUND'
+    if (status === 409) return 'CONFLICT'
     if (status === 429) return 'RATE_LIMITED'
     if (status === 502 || status === 503 || status === 504) return 'UNAVAILABLE'
     return 'INTERNAL'
