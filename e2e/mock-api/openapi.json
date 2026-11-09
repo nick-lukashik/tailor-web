@@ -393,7 +393,128 @@
                         "bearer": []
                     }
                 ],
-                "summary": "One of the caller's applications with its vacancy (text and parse) and CV status",
+                "summary": "One of the caller's applications with its vacancy (text and parse), CV and materials status",
+                "tags": ["applications"]
+            },
+            "patch": {
+                "operationId": "ApplicationsController_update_v1",
+                "parameters": [
+                    {
+                        "name": "x-request-id",
+                        "in": "header",
+                        "description": "Echoed back; generated when absent",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "id",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateApplication"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Application"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Validation failed (VALIDATION_FAILED)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "No valid access token (UNAUTHORIZED)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "The token lacks the tailor role (FORBIDDEN)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found (NOT_FOUND)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal error (INTERNAL)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "A dependency (Postgres, tailor-tex) over its time budget or unavailable, retry later (UNAVAILABLE)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "504": {
+                        "description": "Request over its budget, 10 s unless the route says otherwise (TIMEOUT)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Set the status of one of the caller's applications, e.g. sent once they applied",
                 "tags": ["applications"]
             }
         },
@@ -499,6 +620,111 @@
                     }
                 ],
                 "summary": "Queue a new version of the CV of one of the caller's applications, tailored to its vacancy",
+                "tags": ["applications"]
+            }
+        },
+        "/api/v1/applications/{id}/materials": {
+            "post": {
+                "description": "Written from its newest ready CV. 409 when no CV is ready or a version is still queued or generating.",
+                "operationId": "MaterialsController_create_v1",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ApplicationMaterials"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "No valid access token (UNAUTHORIZED)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "The token lacks the tailor role (FORBIDDEN)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found (NOT_FOUND)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflicts with the current state (CONFLICT)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal error (INTERNAL)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "A dependency (Postgres, tailor-tex) over its time budget or unavailable, retry later (UNAVAILABLE)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "504": {
+                        "description": "Request over its budget, 10 s unless the route says otherwise (TIMEOUT)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Queue new materials (cover letter, e-mail, messages) of one of the caller's applications",
                 "tags": ["applications"]
             }
         },
@@ -1197,6 +1423,10 @@
                         "type": "string",
                         "enum": ["none", "queued", "generating", "ready", "failed"]
                     },
+                    "materialsStatus": {
+                        "type": "string",
+                        "enum": ["none", "queued", "generating", "ready", "failed"]
+                    },
                     "createdAt": {
                         "type": "string",
                         "format": "date-time",
@@ -1213,6 +1443,7 @@
                     "vacancyId",
                     "parseStatus",
                     "cvStatus",
+                    "materialsStatus",
                     "createdAt"
                 ],
                 "additionalProperties": false
@@ -1257,6 +1488,10 @@
                         "type": "string",
                         "enum": ["none", "queued", "generating", "ready", "failed"]
                     },
+                    "materialsStatus": {
+                        "type": "string",
+                        "enum": ["none", "queued", "generating", "ready", "failed"]
+                    },
                     "createdAt": {
                         "type": "string",
                         "format": "date-time",
@@ -1272,6 +1507,9 @@
                     },
                     "cv": {
                         "$ref": "#/components/schemas/ApplicationCv"
+                    },
+                    "materials": {
+                        "$ref": "#/components/schemas/ApplicationMaterials"
                     }
                 },
                 "required": [
@@ -1284,9 +1522,11 @@
                     "vacancyId",
                     "parseStatus",
                     "cvStatus",
+                    "materialsStatus",
                     "createdAt",
                     "vacancy",
-                    "cv"
+                    "cv",
+                    "materials"
                 ],
                 "additionalProperties": false
             },
@@ -2932,6 +3172,84 @@
                     }
                 },
                 "required": ["vacancyId", "parseStatus"],
+                "additionalProperties": false
+            },
+            "MaterialsContent": {
+                "type": "object",
+                "properties": {
+                    "language": {
+                        "type": "string",
+                        "enum": ["en", "ru"]
+                    },
+                    "coverLetter": {
+                        "type": "string"
+                    },
+                    "emailSubject": {
+                        "type": "string"
+                    },
+                    "emailBody": {
+                        "type": "string"
+                    },
+                    "telegramMessage": {
+                        "type": "string"
+                    },
+                    "linkedinNote": {
+                        "type": "string"
+                    },
+                    "whyMe": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "language",
+                    "coverLetter",
+                    "emailSubject",
+                    "emailBody",
+                    "telegramMessage",
+                    "linkedinNote",
+                    "whyMe"
+                ],
+                "additionalProperties": false
+            },
+            "ApplicationMaterials": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "enum": ["none", "queued", "generating", "ready", "failed"]
+                    },
+                    "version": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 9007199254740991
+                    },
+                    "content": {
+                        "$ref": "#/components/schemas/MaterialsContent"
+                    },
+                    "error": {
+                        "type": "string"
+                    },
+                    "updatedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                    }
+                },
+                "required": ["status"],
+                "additionalProperties": false
+            },
+            "UpdateApplication": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "enum": ["new", "sent", "interview", "offer", "rejected"]
+                    }
+                },
+                "required": ["status"],
                 "additionalProperties": false
             }
         }

@@ -45,14 +45,15 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** One of the caller's applications with its vacancy (text and parse) and CV status */
+        /** One of the caller's applications with its vacancy (text and parse), CV and materials status */
         get: operations["ApplicationsController_get_v1"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /** Set the status of one of the caller's applications, e.g. sent once they applied */
+        patch: operations["ApplicationsController_update_v1"];
         trace?: never;
     };
     "/api/v1/applications/{id}/cv": {
@@ -69,6 +70,26 @@ export interface paths {
          * @description 409 when the vacancy is not parsed yet or a version is still queued or generating.
          */
         post: operations["CvGenerationController_create_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications/{id}/materials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue new materials (cover letter, e-mail, messages) of one of the caller's applications
+         * @description Written from its newest ready CV. 409 when no CV is ready or a version is still queued or generating.
+         */
+        post: operations["MaterialsController_create_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -199,6 +220,8 @@ export interface components {
             parseStatus: "pending" | "parsed" | "failed" | null;
             /** @enum {string} */
             cvStatus: "none" | "queued" | "generating" | "ready" | "failed";
+            /** @enum {string} */
+            materialsStatus: "none" | "queued" | "generating" | "ready" | "failed";
             /** Format: date-time */
             createdAt: string;
         };
@@ -217,10 +240,13 @@ export interface components {
             parseStatus: "pending" | "parsed" | "failed" | null;
             /** @enum {string} */
             cvStatus: "none" | "queued" | "generating" | "ready" | "failed";
+            /** @enum {string} */
+            materialsStatus: "none" | "queued" | "generating" | "ready" | "failed";
             /** Format: date-time */
             createdAt: string;
             vacancy: components["schemas"]["ApplicationVacancy"] | null;
             cv: components["schemas"]["ApplicationCv"];
+            materials: components["schemas"]["ApplicationMaterials"];
         };
         ApplicationVacancy: {
             /** Format: uuid */
@@ -705,6 +731,29 @@ export interface components {
             /** @enum {string} */
             parseStatus: "pending";
         };
+        MaterialsContent: {
+            /** @enum {string} */
+            language: "en" | "ru";
+            coverLetter: string;
+            emailSubject: string;
+            emailBody: string;
+            telegramMessage: string;
+            linkedinNote: string;
+            whyMe: string[];
+        };
+        ApplicationMaterials: {
+            /** @enum {string} */
+            status: "none" | "queued" | "generating" | "ready" | "failed";
+            version?: number;
+            content?: components["schemas"]["MaterialsContent"];
+            error?: string;
+            /** Format: date-time */
+            updatedAt?: string;
+        };
+        UpdateApplication: {
+            /** @enum {string} */
+            status: "new" | "sent" | "interview" | "offer" | "rejected";
+        };
     };
     responses: never;
     parameters: never;
@@ -1015,6 +1064,97 @@ export interface operations {
             };
         };
     };
+    ApplicationsController_update_v1: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Echoed back; generated when absent */
+                "x-request-id"?: string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateApplication"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Application"];
+                };
+            };
+            /** @description Validation failed (VALIDATION_FAILED) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description No valid access token (UNAUTHORIZED) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token lacks the tailor role (FORBIDDEN) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not found (NOT_FOUND) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Internal error (INTERNAL) */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description A dependency (Postgres, tailor-tex) over its time budget or unavailable, retry later (UNAVAILABLE) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Request over its budget, 10 s unless the route says otherwise (TIMEOUT) */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
     CvGenerationController_create_v1: {
         parameters: {
             query?: never;
@@ -1032,6 +1172,90 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApplicationCv"];
+                };
+            };
+            /** @description No valid access token (UNAUTHORIZED) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token lacks the tailor role (FORBIDDEN) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not found (NOT_FOUND) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Conflicts with the current state (CONFLICT) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Internal error (INTERNAL) */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description A dependency (Postgres, tailor-tex) over its time budget or unavailable, retry later (UNAVAILABLE) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Request over its budget, 10 s unless the route says otherwise (TIMEOUT) */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    MaterialsController_create_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationMaterials"];
                 };
             };
             /** @description No valid access token (UNAUTHORIZED) */

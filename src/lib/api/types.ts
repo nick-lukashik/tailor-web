@@ -25,6 +25,14 @@ export type ApplicationCv = ApplicationDetail['cv']
 export type CvStatus = ApplicationCv['status']
 /** POST /applications/{id}/cv: the new version, `queued`. */
 export type CvQueued = JsonOf<paths['/api/v1/applications/{id}/cv']['post']['responses'][202]>
+/** The texts for applying by hand: their newest version's status, the newest ready content. */
+export type ApplicationMaterials = ApplicationDetail['materials']
+export type MaterialsStatus = ApplicationMaterials['status']
+export type MaterialsContent = NonNullable<ApplicationMaterials['content']>
+/** POST /applications/{id}/materials: the new version, `queued`. */
+export type MaterialsQueued = JsonOf<paths['/api/v1/applications/{id}/materials']['post']['responses'][202]>
+/** PATCH /applications/{id}: the status set by hand. */
+export type UpdateApplicationInput = JsonOf<paths['/api/v1/applications/{id}']['patch']['requestBody']>
 export type ListApplicationsQuery = NonNullable<paths['/api/v1/applications']['get']['parameters']['query']>
 export type CreateApplicationInput = JsonOf<paths['/api/v1/applications']['post']['requestBody']>
 
