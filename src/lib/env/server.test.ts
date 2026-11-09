@@ -23,7 +23,6 @@ describe('serverEnv', () => {
             API_BODY_TIMEOUT_MS: '',
             API_RENDER_TIMEOUT_MS: '',
             HOME_URL: '',
-            CV_URL: '',
             ID_URL: '',
             ID_API_URL: '',
             SESSION_SECRET: '',
@@ -39,20 +38,17 @@ describe('serverEnv', () => {
             // tailor-api builds the master CV PDF in up to 65 s.
             API_RENDER_TIMEOUT_MS: 70_000,
             HOME_URL: 'https://nick-lukashik.com',
-            CV_URL: 'http://localhost:4000/api/v1/cv',
         })
         expect(env.ID_URL).toBeUndefined()
         expect(env.SESSION_SECRET).toBeUndefined()
     })
 
-    it('reads the CV base and the account', async () => {
+    it('reads the account', async () => {
         const env = await load({
-            CV_URL: 'https://cv.example.com/',
             ID_URL: 'https://id.example.com/',
             ID_API_URL: 'http://id-api.example.test',
             SESSION_SECRET: 'x'.repeat(32),
         })
-        expect(env.CV_URL).toBe('https://cv.example.com')
         expect(env.ID_URL).toBe('https://id.example.com')
         expect(env.ID_API_URL).toBe('http://id-api.example.test')
     })

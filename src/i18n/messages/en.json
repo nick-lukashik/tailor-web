@@ -46,10 +46,67 @@
         "detail": {
             "back": "All applications",
             "createdAt": "Added <time>{date}</time>",
-            "cv": "CV (PDF)",
-            "vacancyLink": "Vacancy",
-            "vacancyText": "Vacancy text",
-            "emptyVacancyText": "No vacancy text."
+            "vacancyLink": "Vacancy page",
+            "emptyVacancyText": "No vacancy text.",
+            "originalText": "Original text",
+            "model": "Read by {model}"
+        },
+        "vacancy": {
+            "title": "Vacancy",
+            "pending": "Reading the vacancy…",
+            "noText": "No vacancy text yet: paste it to read the vacancy.",
+            "failed": "Couldn't read the vacancy.",
+            "readAgain": "Read again",
+            "reading": "Starting…",
+            "readAgainFailed": "Couldn't start. Try again.",
+            "facts": "Key facts",
+            "remote": {
+                "remote": "Remote",
+                "hybrid": "Hybrid",
+                "onsite": "On site"
+            },
+            "location": "Location",
+            "regions": "Regions",
+            "seniority": "Level",
+            "employment": "Employment",
+            "salary": "Salary",
+            "language": "Language",
+            "format": "Format",
+            "employmentType": {
+                "full-time": "Full time",
+                "part-time": "Part time",
+                "contract": "Contract",
+                "freelance": "Freelance",
+                "internship": "Internship",
+                "temporary": "Temporary"
+            },
+            "salaryBound": {
+                "range": "{amount}",
+                "exact": "{amount}",
+                "from": "from {amount}",
+                "upTo": "up to {amount}"
+            },
+            "salaryPeriod": "{amount} {period, select, hour {an hour} day {a day} week {a week} month {a month} year {a year} other {}}",
+            "skills": "Skills",
+            "requiredSkill": "required",
+            "requiredHint": "Required ones are in bold.",
+            "requirements": "Requirements",
+            "responsibilities": "Responsibilities",
+            "niceToHave": "Nice to have",
+            "apply": "How to apply",
+            "channel": {
+                "form": "Form",
+                "email": "Email",
+                "telegram": "Telegram",
+                "link": "Link",
+                "other": "Other"
+            }
+        },
+        "cv": {
+            "title": "CV",
+            "none": "CV not generated yet.",
+            "generating": "Making the CV…",
+            "open": "CV (PDF)"
         },
         "untitled": "Untitled vacancy",
         "parse": {

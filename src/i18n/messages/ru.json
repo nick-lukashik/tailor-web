@@ -46,10 +46,67 @@
         "detail": {
             "back": "Все отклики",
             "createdAt": "Добавлен <time>{date}</time>",
-            "cv": "CV (PDF)",
-            "vacancyLink": "Вакансия",
-            "vacancyText": "Текст вакансии",
-            "emptyVacancyText": "Текста вакансии нет."
+            "vacancyLink": "Страница вакансии",
+            "emptyVacancyText": "Текста вакансии нет.",
+            "originalText": "Исходный текст",
+            "model": "Прочитала модель {model}"
+        },
+        "vacancy": {
+            "title": "Вакансия",
+            "pending": "Читаем вакансию…",
+            "noText": "Текста вакансии пока нет: вставьте его, чтобы прочитать вакансию.",
+            "failed": "Не удалось прочитать вакансию.",
+            "readAgain": "Прочитать снова",
+            "reading": "Запускаем…",
+            "readAgainFailed": "Не удалось запустить. Попробуйте ещё раз.",
+            "facts": "Главное",
+            "remote": {
+                "remote": "Удалённо",
+                "hybrid": "Гибрид",
+                "onsite": "В офисе"
+            },
+            "location": "Где",
+            "regions": "Регионы",
+            "seniority": "Уровень",
+            "employment": "Занятость",
+            "salary": "Зарплата",
+            "language": "Язык",
+            "format": "Формат",
+            "employmentType": {
+                "full-time": "Полная",
+                "part-time": "Частичная",
+                "contract": "Контракт",
+                "freelance": "Фриланс",
+                "internship": "Стажировка",
+                "temporary": "Временная"
+            },
+            "salaryBound": {
+                "range": "{amount}",
+                "exact": "{amount}",
+                "from": "от {amount}",
+                "upTo": "до {amount}"
+            },
+            "salaryPeriod": "{amount} {period, select, hour {в час} day {в день} week {в неделю} month {в месяц} year {в год} other {}}",
+            "skills": "Навыки",
+            "requiredSkill": "обязательный",
+            "requiredHint": "Обязательные выделены жирным.",
+            "requirements": "Требования",
+            "responsibilities": "Обязанности",
+            "niceToHave": "Будет плюсом",
+            "apply": "Как откликнуться",
+            "channel": {
+                "form": "Форма",
+                "email": "Почта",
+                "telegram": "Telegram",
+                "link": "Ссылка",
+                "other": "Другое"
+            }
+        },
+        "cv": {
+            "title": "CV",
+            "none": "CV ещё не создано.",
+            "generating": "Создаём CV…",
+            "open": "CV (PDF)"
         },
         "untitled": "Вакансия без названия",
         "parse": {

@@ -123,6 +123,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/vacancies/{id}/parse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Parses a vacancy of the caller's pool again, in the background; `pending` until then */
+        post: operations["VacanciesController_reparse_v1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -576,6 +593,83 @@ export interface components {
                 result: "created" | "existing";
             }[];
         };
+        ParsedVacancy: {
+            title: string | null;
+            company: string | null;
+            companyDescription: string | null;
+            seniority: string | null;
+            location: string | null;
+            /** @enum {string} */
+            remote: "remote" | "hybrid" | "onsite" | "unknown";
+            regions: string[];
+            /** @enum {string|null} */
+            employmentType: "full-time" | "part-time" | "contract" | "freelance" | "internship" | "temporary" | null;
+            salary: {
+                min: number | null;
+                max: number | null;
+                currency: string | null;
+                /** @enum {string|null} */
+                period: "hour" | "day" | "week" | "month" | "year" | null;
+            } | null;
+            language: string | null;
+            skills: {
+                name: string;
+                required: boolean;
+            }[];
+            requirements: string[];
+            responsibilities: string[];
+            niceToHave: string[];
+            applyChannels: {
+                /** @enum {string} */
+                kind: "form" | "email" | "telegram" | "link" | "other";
+                value: string;
+            }[];
+            summary: string;
+            warnings: string[];
+        };
+        ApplicationVacancy: {
+            /** Format: uuid */
+            id: string;
+            url: string | null;
+            rawText: string;
+            /** @enum {string} */
+            parseStatus: "pending" | "parsed" | "failed";
+            parseError: string | null;
+            /** Format: date-time */
+            updatedAt: string;
+            model: string | null;
+            parsed: components["schemas"]["ParsedVacancy"] | null;
+        };
+        ApplicationCv: {
+            /** @enum {string} */
+            status: "none" | "generating" | "ready";
+            /** Format: uri */
+            url?: string;
+        };
+        ApplicationDetail: {
+            /** Format: uuid */
+            id: string;
+            company: string;
+            role: string;
+            vacancyUrl: string | null;
+            vacancyText: string;
+            /** @enum {string} */
+            status: "new" | "sent" | "interview" | "offer" | "rejected";
+            /** Format: uuid */
+            vacancyId: string | null;
+            /** @enum {string|null} */
+            parseStatus: "pending" | "parsed" | "failed" | null;
+            /** Format: date-time */
+            createdAt: string;
+            vacancy: components["schemas"]["ApplicationVacancy"] | null;
+            cv: components["schemas"]["ApplicationCv"];
+        };
+        VacancyParseQueued: {
+            /** Format: uuid */
+            vacancyId: string;
+            /** @enum {string} */
+            parseStatus: "pending";
+        };
     };
     responses: never;
     parameters: never;
@@ -827,7 +921,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Application"];
+                    "application/json": components["schemas"]["ApplicationDetail"];
                 };
             };
             /** @description No valid access token (UNAUTHORIZED) */
@@ -1237,6 +1331,84 @@ export interface operations {
             };
             /** @description Request body over 1 MiB (PAYLOAD_TOO_LARGE) */
             413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Internal error (INTERNAL) */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description A dependency (Postgres, tailor-tex) over its time budget or unavailable, retry later (UNAVAILABLE) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Request over its budget, 10 s unless the route says otherwise (TIMEOUT) */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    VacanciesController_reparse_v1: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description Echoed back; generated when absent */
+                "x-request-id"?: string;
+            };
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VacancyParseQueued"];
+                };
+            };
+            /** @description No valid access token (UNAUTHORIZED) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token lacks the tailor role (FORBIDDEN) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not found (NOT_FOUND) */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -2,7 +2,7 @@
 
 The site of Tailor on `tailor.<domain>`: a CV and a cover letter for each vacancy, and every application on one board. Open only to people whose id-api token carries the `tailor` role; anyone else is redirected to the platform's landing and sees nothing of it. Its backend is [`tailor-api`](https://github.com/nick-lukashik/tailor-api) (OpenAPI copy in `e2e/mock-api/openapi.json`; the bundled mock serves the same contract for development and tests).
 
-Created from [`next-starter`](https://github.com/nick-lukashik/next-starter) (`.template-version`) plus the API part of [`next-example`](https://github.com/nick-lukashik/next-example) (the `/api` proxy, TanStack Query, the typed client, toasts). Now: the session of `id`, the person's applications (list and page, with a link to the demo CV on `cv.<domain>`) and their profile as a JSON editor; `/` leads to the applications. Every page needs a signed-in person with the `tailor` role (the owner's decision of 08.11, which replaced the allowlist of D-112). The pipeline and the forms come with the logic.
+Created from [`next-starter`](https://github.com/nick-lukashik/next-starter) (`.template-version`) plus the API part of [`next-example`](https://github.com/nick-lukashik/next-example) (the `/api` proxy, TanStack Query, the typed client, toasts). Now: the session of `id`, the person's applications (the list, and the page with what was read from the vacancy, its original text and the state of its CV) and their profile as a JSON editor; `/` leads to the applications. Every page needs a signed-in person with the `tailor` role (the owner's decision of 08.11, which replaced the allowlist of D-112). The pipeline and the forms come with the logic.
 
 ## What is inside
 
@@ -53,7 +53,7 @@ To use the real backend, run `tailor-api` (its README, "Getting started") on `:4
 | QueryClient: browser singleton, one per request on the server, devtools in dev only | `src/lib/query/`, `src/app/providers.tsx` |
 | API client, errors, keys and query options | `src/lib/api/` (`client.ts`, `errors.ts`, `applications.ts`, `vacancies.ts`, `types.ts`) |
 | Applications: server prefetch + `HydrationBoundary`, infinite list | `src/app/(private)/applications/(list)/page.tsx`, `src/app/(private)/applications/_components/applications-list.tsx` |
-| Application page: `generateMetadata`, `notFound()`, the CV link of the application (`CV_URL`) | `src/app/(private)/applications/[id]/page.tsx`, `src/app/(private)/applications/load-application.ts` |
+| Application page: `generateMetadata`, `notFound()`, the read vacancy (polled while `pending`, "Read again" through `POST /vacancies/{id}/parse`), the CV state (a link only once tailor-api gives its `url`) | `src/app/(private)/applications/[id]/page.tsx`, `src/app/(private)/applications/load-application.ts` |
 | Nothing is indexed (noindex everywhere, robots.txt disallows all) | `src/app/layout.tsx`, `src/app/robots.ts` |
 | Optimistic create, per-field errors (when forms arrive) | next-example's `src/app/notes/_components/` |
 | `/api/*` → `API_URL` proxy with the person's token | `src/app/api/[...path]/route.ts` |
@@ -178,7 +178,6 @@ The specs create the applications they need through the API and read expected va
 | `ID_URL` | none | at startup; id-web's public origin (`https://id.nick-lukashik.com`): the header's account link |
 | `ID_API_URL` | none | at startup; id-api in the cluster (`http://id-api.prod.svc`): refresh, `me`, sign-out |
 | `SESSION_SECRET` | none | at startup; key of the shared session cookie, 32+ characters, the same on every site under the domain (secret `web-session`). Without all three: no accounts (local work with the mock) |
-| `CV_URL` | `http://localhost:4000/api/v1/cv` | at startup; base of the public CV links, `${CV_URL}/<application id>` (tailor-api redirects to `<id>/<Name-Role-CV>.pdf`) (prod: `https://cv.<domain>`) |
 | `SITE_URL` | `http://localhost:3000` | at startup |
 | `HOME_URL` | `https://nick-lukashik.com` | at startup; the platform's landing, where anyone without access is redirected (accounts on only) |
 | `APP_VERSION` | `dev` | at startup (`x-app-version` header) |
@@ -216,7 +215,7 @@ Versions are pinned exactly. [Renovate](https://docs.renovatebot.com/) (`renovat
 The image follows the [service runtime contract](https://github.com/nick-lukashik/.github/blob/master/docs/service-contract.md) (kind **web**).
 
 - gitops `apps/tailor-web/prod`: `components/service`, `components/web`, `components/subdomain` (`tailor`), the image by digest.
-- ConfigMap `tailor-web-config`: `API_URL=http://tailor-api.prod.svc`, `SITE_URL` and `CV_URL` derived from the hosts (`https://tailor.<domain>`, `https://cv.<domain>`), `ID_URL`, `ID_API_URL` (`HOME_URL` defaults to prod's landing); `SESSION_SECRET` from the SealedSecret `web-session` (`components/web`); egress to id-api (`api-client`). The smoke check follows redirects: `/` now ends on the landing, so `/robots.txt` is the path that answers 200 from this site itself. tailor-api lists tailor-web as its caller in its own folder.
+- ConfigMap `tailor-web-config`: `API_URL=http://tailor-api.prod.svc`, `SITE_URL` derived from the host (`https://tailor.<domain>`; a `CV_URL` there is no longer read), `ID_URL`, `ID_API_URL` (`HOME_URL` defaults to prod's landing); `SESSION_SECRET` from the SealedSecret `web-session` (`components/web`); egress to id-api (`api-client`). The smoke check follows redirects: `/` now ends on the landing, so `/robots.txt` is the path that answers 200 from this site itself. tailor-api lists tailor-web as its caller in its own folder.
 - Probes: `/health/live` and `/health/ready` (reports the API, does not require it). Both return `x-app-version`, which the post-deploy smoke check waits for.
 
 ## Limitations

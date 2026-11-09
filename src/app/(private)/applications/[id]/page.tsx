@@ -2,11 +2,10 @@ import { dehydrate, HydrationBoundary } from '@tanstack/react-query'
 import { type Metadata } from 'next'
 import { getTranslations } from 'next-intl/server'
 import { applicationKeys } from '@/lib/api/applications'
-import { serverEnv } from '@/lib/env/server'
 import { getServerQueryClient } from '@/lib/query/server'
 import { mayEnter, requestAccess } from '@/lib/session/access'
 import { ApplicationView } from '../_components/application-view'
-import { applicationTitle } from '../application-title'
+import { applicationRole, applicationTitle } from '../application-title'
 import { loadApplication } from '../load-application'
 
 export async function generateMetadata({ params }: PageProps<'/applications/[id]'>): Promise<Metadata> {
@@ -20,7 +19,7 @@ export async function generateMetadata({ params }: PageProps<'/applications/[id]
         }
     const application = await loadApplication(id)
     const name = applicationTitle(application) ?? t('untitled')
-    const role = application.role.trim()
+    const role = applicationRole(application)
     return {
         title: role ? `${name}: ${role}` : name,
         description: t('meta.description'),
@@ -41,11 +40,7 @@ export default async function ApplicationPage({ params }: PageProps<'/applicatio
     queryClient.setQueryData(applicationKeys.detail(id), application)
     return (
         <HydrationBoundary state={dehydrate(queryClient)}>
-            <ApplicationView
-                id={id}
-                // tailor-api redirects the id to <id>/<Name-Role-CV>.pdf.
-                cvUrl={`${serverEnv.CV_URL}/${encodeURIComponent(id)}`}
-            />
+            <ApplicationView id={id} />
         </HydrationBoundary>
     )
 }
