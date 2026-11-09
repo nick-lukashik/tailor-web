@@ -744,6 +744,121 @@
                 "summary": "The master CV: a PDF of the profile without a vacancy, built by tailor-tex (up to 65 s)",
                 "tags": ["profile"]
             }
+        },
+        "/api/v1/vacancies/intake": {
+            "post": {
+                "operationId": "VacanciesController_intake_v1",
+                "parameters": [
+                    {
+                        "name": "x-request-id",
+                        "in": "header",
+                        "description": "Echoed back; generated when absent",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/VacancyIntake"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/VacancyIntakeResult"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Validation failed (VALIDATION_FAILED)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "No valid access token (UNAUTHORIZED)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "The token lacks the tailor role (FORBIDDEN)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "413": {
+                        "description": "Request body over 1 MiB (PAYLOAD_TOO_LARGE)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal error (INTERNAL)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "A dependency (Postgres, tailor-tex) over its time budget or unavailable, retry later (UNAVAILABLE)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "504": {
+                        "description": "Request over its budget, 10 s unless the route says otherwise (TIMEOUT)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Links and texts of vacancies (1–200) into the caller's pool; unparsed, `pending`",
+                "tags": ["vacancies"]
+            }
         }
     },
     "info": {
@@ -857,13 +972,34 @@
                         "type": "string",
                         "enum": ["new", "sent", "interview", "offer", "rejected"]
                     },
+                    "vacancyId": {
+                        "nullable": true,
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "parseStatus": {
+                        "nullable": true,
+                        "type": "string",
+                        "enum": ["pending", "parsed", "failed"]
+                    },
                     "createdAt": {
                         "type": "string",
                         "format": "date-time",
                         "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
                     }
                 },
-                "required": ["id", "company", "role", "vacancyUrl", "vacancyText", "status", "createdAt"],
+                "required": [
+                    "id",
+                    "company",
+                    "role",
+                    "vacancyUrl",
+                    "vacancyText",
+                    "status",
+                    "vacancyId",
+                    "parseStatus",
+                    "createdAt"
+                ],
                 "additionalProperties": false
             },
             "CreateApplication": {
@@ -1630,6 +1766,10 @@
                             "minLength": 1,
                             "maxLength": 100
                         },
+                        "aiOnly": {
+                            "default": false,
+                            "type": "boolean"
+                        },
                         "items": {
                             "default": [],
                             "maxItems": 100,
@@ -1790,6 +1930,10 @@
                             "default": "",
                             "type": "string",
                             "maxLength": 5000
+                        },
+                        "aiOnly": {
+                            "default": false,
+                            "type": "boolean"
                         }
                     },
                     "required": ["id"],
@@ -2141,6 +2285,14 @@
                         "default": "strict",
                         "type": "string",
                         "enum": ["strict", "free"]
+                    },
+                    "cvShowLocation": {
+                        "default": true,
+                        "type": "boolean"
+                    },
+                    "cvShowPhone": {
+                        "default": true,
+                        "type": "boolean"
                     }
                 },
                 "additionalProperties": false
@@ -2164,6 +2316,78 @@
                     }
                 },
                 "required": ["version", "sha256", "updatedAt"],
+                "additionalProperties": false
+            },
+            "VacancyIntake": {
+                "type": "object",
+                "properties": {
+                    "items": {
+                        "minItems": 1,
+                        "maxItems": 200,
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/VacancyIntakeItem"
+                        }
+                    }
+                },
+                "required": ["items"],
+                "additionalProperties": false
+            },
+            "VacancyIntakeItem": {
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string",
+                        "maxLength": 2048,
+                        "format": "uri"
+                    },
+                    "text": {
+                        "default": "",
+                        "type": "string",
+                        "maxLength": 100000
+                    }
+                },
+                "additionalProperties": false
+            },
+            "VacancyIntakeResult": {
+                "type": "object",
+                "properties": {
+                    "created": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                    },
+                    "existing": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "applicationId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "vacancyId": {
+                                    "type": "string",
+                                    "format": "uuid",
+                                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                                },
+                                "result": {
+                                    "type": "string",
+                                    "enum": ["created", "existing"]
+                                }
+                            },
+                            "required": ["applicationId", "vacancyId", "result"],
+                            "additionalProperties": false
+                        }
+                    }
+                },
+                "required": ["created", "existing", "items"],
                 "additionalProperties": false
             }
         }

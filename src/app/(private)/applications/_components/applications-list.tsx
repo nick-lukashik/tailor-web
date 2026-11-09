@@ -2,42 +2,12 @@
 
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { Loader2Icon } from 'lucide-react'
-import Link from 'next/link'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { applicationQueries } from '@/lib/api/applications'
 import { browserApi } from '@/lib/api/browser'
-import { type Application } from '@/lib/api/types'
-import { ApplicationDate } from './application-date'
-import { StatusBadge } from './status-badge'
-
-function ApplicationItem({ application }: { application: Application }) {
-    return (
-        <li>
-            <Card size="sm">
-                <CardContent className="grid gap-1">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                        <h3 className="font-semibold break-words">
-                            <Link
-                                href={`/applications/${encodeURIComponent(application.id)}`}
-                                className="underline-offset-4 hover:underline"
-                            >
-                                {application.company}
-                            </Link>
-                        </h3>
-                        <StatusBadge status={application.status} />
-                    </div>
-                    {application.role && <p className="text-muted-foreground">{application.role}</p>}
-                    <p className="text-xs text-muted-foreground">
-                        <ApplicationDate value={application.createdAt} />
-                    </p>
-                </CardContent>
-            </Card>
-        </li>
-    )
-}
+import { ApplicationItem } from './application-item'
 
 /** Cursor pagination with useInfiniteQuery; page 1 arrives hydrated from the server. */
 export function ApplicationsList() {

@@ -5,6 +5,7 @@ import { applicationQueries } from '@/lib/api/applications'
 import { serverApi } from '@/lib/api/server'
 import { getServerQueryClient } from '@/lib/query/server'
 import { mayEnter, requestAccess } from '@/lib/session/access'
+import { AddVacancyForm } from '../_components/add-vacancy-form'
 import { ApplicationsList } from '../_components/applications-list'
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -38,6 +39,7 @@ export default async function ApplicationsPage() {
                 <h1 className="text-3xl font-bold tracking-tight">{t('heading')}</h1>
                 <p className="max-w-2xl text-muted-foreground">{t('lead')}</p>
             </header>
+            <AddVacancyForm />
             <HydrationBoundary state={dehydrate(queryClient)}>
                 <ApplicationsList />
             </HydrationBoundary>

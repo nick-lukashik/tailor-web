@@ -21,3 +21,13 @@ export type Me = JsonOf<paths['/api/v1/me']['get']['responses'][200]>
 export type Profile = JsonOf<paths['/api/v1/profile']['get']['responses'][200]>
 export type ProfileDocument = Profile['document']
 export type SavedProfile = JsonOf<paths['/api/v1/profile']['put']['responses'][200]>
+
+export type ParseStatus = Application['parseStatus']
+type IntakeBody = JsonOf<paths['/api/v1/vacancies/intake']['post']['requestBody']>
+type IntakeItem = IntakeBody['items'][number]
+/** `text` has a default on the API (blank = none), so a request may leave it out. */
+export type VacancyIntakeItem = Omit<IntakeItem, 'text'> & Partial<Pick<IntakeItem, 'text'>>
+export type VacancyIntakeInput = {
+    items: VacancyIntakeItem[]
+}
+export type VacancyIntakeResult = JsonOf<paths['/api/v1/vacancies/intake']['post']['responses'][200]>
