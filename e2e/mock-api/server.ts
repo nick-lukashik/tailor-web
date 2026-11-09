@@ -15,7 +15,13 @@
 // document that is not an object, an unknown section, or a person.email without @.
 // GET /api/v1/profile/cv.pdf (the master CV) answers MOCK_PDF for a saved profile.
 // POST /api/v1/vacancies/intake adds `pending` applications with no company or role;
-// a link already in the list is `existing` (same string, no normalization).
+// a link already in the list is `existing` (same string, no normalization). Their
+// vacancies stay `pending` until POST /__mock/vacancies/<id> {"parseStatus": "parsed"
+// | "failed", "parseError"?} settles one. POST /api/v1/vacancies/<id>/parse (202)
+// reads one again: after MOCK_PARSE_MS it is `failed` with `no_text` without a
+// text, else `parsed`. GET /api/v1/applications/<id> adds the vacancy and `cv`
+// (always `none`). Seed: application-010 is parsed, 009 failed with no text,
+// 008 pending, 007 failed with a text.
 import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
@@ -38,6 +44,46 @@ type Application = {
     parseStatus: 'pending' | 'parsed' | 'failed' | null
     createdAt: string
 }
+type ParsedVacancy = {
+    title: string | null
+    company: string | null
+    companyDescription: string | null
+    seniority: string | null
+    location: string | null
+    remote: 'remote' | 'hybrid' | 'onsite' | 'unknown'
+    regions: string[]
+    employmentType: 'full-time' | 'part-time' | 'contract' | 'freelance' | 'internship' | 'temporary' | null
+    salary: {
+        min: number | null
+        max: number | null
+        currency: string | null
+        period: 'hour' | 'day' | 'week' | 'month' | 'year' | null
+    } | null
+    language: string | null
+    skills: {
+        name: string
+        required: boolean
+    }[]
+    requirements: string[]
+    responsibilities: string[]
+    niceToHave: string[]
+    applyChannels: {
+        kind: 'form' | 'email' | 'telegram' | 'link' | 'other'
+        value: string
+    }[]
+    summary: string
+    warnings: string[]
+}
+type Vacancy = {
+    id: string
+    url: string | null
+    rawText: string
+    parseStatus: 'pending' | 'parsed' | 'failed'
+    parseError: string | null
+    updatedAt: string
+    model: string | null
+    parsed: ParsedVacancy | null
+}
 type Issue = {
     path: string
     message: string
@@ -53,9 +99,12 @@ type Received = {
 
 const port = Number(process.env.PORT ?? 4000)
 const createDelayMs = Number(process.env.MOCK_DELAY_MS ?? 400)
+const parseDelayMs = Number(process.env.MOCK_PARSE_MS ?? 300)
+const MOCK_MODEL = 'mock-model'
 const openapi = readFileSync(new URL('./openapi.json', import.meta.url), 'utf8')
 
 let applications: Application[] = []
+let vacancies = new Map<string, Vacancy>()
 let received: Received[] = []
 type StoredProfile = {
     version: number
@@ -155,9 +204,107 @@ function profileIssues(document: unknown): Issue[] {
     return issues
 }
 
+/** What the mock "reads" from any vacancy text. */
+function parsedOf(company: string, title: string): ParsedVacancy {
+    return {
+        title,
+        company,
+        companyDescription: 'A product company of the mock API.',
+        seniority: 'senior',
+        location: 'Berlin, Germany',
+        remote: 'hybrid',
+        regions: [
+            'EU',
+            'UTC+0 to UTC+3',
+        ],
+        employmentType: 'full-time',
+        salary: {
+            min: 60_000,
+            max: 80_000,
+            currency: 'EUR',
+            period: 'year',
+        },
+        language: 'en',
+        skills: [
+            {
+                name: 'TypeScript',
+                required: true,
+            },
+            {
+                name: 'PostgreSQL',
+                required: true,
+            },
+            {
+                name: 'Kubernetes',
+                required: false,
+            },
+        ],
+        requirements: [
+            'Five years of backend work',
+            'Written English',
+        ],
+        responsibilities: [
+            'Build and run the API',
+        ],
+        niceToHave: [],
+        applyChannels: [
+            {
+                kind: 'email',
+                value: 'jobs@example.com',
+            },
+            {
+                kind: 'telegram',
+                value: '@example_jobs',
+            },
+            {
+                kind: 'form',
+                value: 'https://jobs.example.com/apply',
+            },
+        ],
+        summary: `${title} at ${company}: backend in TypeScript, hybrid in Berlin.`,
+        warnings: [],
+    }
+}
+
+/** Settles a vacancy as the parse job would. */
+function settle(vacancy: Vacancy, parseStatus: 'parsed' | 'failed', parseError: string | null = null) {
+    vacancy.parseStatus = parseStatus
+    vacancy.parseError = parseStatus === 'failed' ? (parseError ?? 'model_error') : null
+    vacancy.parsed = parseStatus === 'parsed' ? parsedOf('Example GmbH', 'Senior backend engineer') : null
+    vacancy.model = parseStatus === 'parsed' ? MOCK_MODEL : null
+    vacancy.updatedAt = new Date().toISOString()
+}
+
+function newVacancy(url: string | null, rawText: string): Vacancy {
+    const vacancy: Vacancy = {
+        id: randomUUID(),
+        url,
+        rawText,
+        parseStatus: 'pending',
+        parseError: null,
+        updatedAt: new Date().toISOString(),
+        model: null,
+        parsed: null,
+    }
+    vacancies.set(vacancy.id, vacancy)
+    return vacancy
+}
+
+/** The application as the API answers it: its parse status is its vacancy's. */
+function row(application: Application): Application {
+    const vacancy = application.vacancyId ? vacancies.get(application.vacancyId) : undefined
+    return vacancy
+        ? {
+              ...application,
+              parseStatus: vacancy.parseStatus,
+          }
+        : application
+}
+
 function seed() {
     received = []
     profiles = new Map()
+    vacancies = new Map()
     const start = Date.parse('2026-10-01T09:00:00.000Z')
     applications = Array.from(
         {
@@ -178,6 +325,42 @@ function seed() {
             }
         },
     )
+    const seeded: [
+        number,
+        'parsed' | 'failed' | 'pending',
+        string | null,
+    ][] = [
+        [
+            10,
+            'parsed',
+            null,
+        ],
+        [
+            9,
+            'failed',
+            'no_text',
+        ],
+        [
+            8,
+            'pending',
+            null,
+        ],
+        [
+            7,
+            'failed',
+            'model_error',
+        ],
+    ]
+    for (const [n, parseStatus, parseError] of seeded) {
+        const application = applications.find(item => item.id === `application-${String(n).padStart(3, '0')}`)
+        if (!application) continue
+        const vacancy = newVacancy(application.vacancyUrl, parseError === 'no_text' ? '' : application.vacancyText)
+        application.vacancyId = vacancy.id
+        application.vacancyText = ''
+        if (parseStatus !== 'pending') settle(vacancy, parseStatus, parseError)
+        if (parseStatus === 'parsed')
+            vacancy.parsed = parsedOf(application.company, application.role || 'Senior backend engineer')
+    }
 }
 
 const encodeCursor = (id: string) =>
@@ -268,6 +451,20 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
     }
     if (method === 'GET' && path === '/__mock/requests') {
         return send(res, 200, received, requestId)
+    }
+    const settleHook = path.match(/^\/__mock\/vacancies\/([^/]+)$/)
+    if (method === 'POST' && settleHook) {
+        const vacancy = vacancies.get(decodeURIComponent(settleHook[1] ?? ''))
+        const body = (await readJson(req)) as
+            | {
+                  parseStatus?: unknown
+                  parseError?: unknown
+              }
+            | undefined
+        if (!vacancy || (body?.parseStatus !== 'parsed' && body?.parseStatus !== 'failed'))
+            return fail(res, 404, 'NOT_FOUND', 'No such vacancy or status', requestId)
+        settle(vacancy, body.parseStatus, typeof body.parseError === 'string' ? body.parseError : null)
+        return send(res, 204, undefined, requestId)
     }
 
     const record: Received = {
@@ -375,7 +572,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
             }
             start = index + 1
         }
-        const items = applications.slice(start, start + limit)
+        const items = applications.slice(start, start + limit).map(row)
         const last = items.at(-1)
         const nextCursor = last && start + limit < applications.length ? encodeCursor(last.id) : null
         return send(
@@ -394,7 +591,42 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
         const id = decodeURIComponent(detail[1] ?? '')
         const application = applications.find(item => item.id === id)
         if (!application) return fail(res, 404, 'NOT_FOUND', `Application ${id} not found`, requestId)
-        return send(res, 200, application, requestId)
+        return send(
+            res,
+            200,
+            {
+                ...row(application),
+                vacancy: (application.vacancyId && vacancies.get(application.vacancyId)) || null,
+                cv: {
+                    status: 'none',
+                },
+            },
+            requestId,
+        )
+    }
+
+    const reparse = path.match(/^\/api\/v1\/vacancies\/([^/]+)\/parse$/)
+    if (method === 'POST' && reparse) {
+        const id = decodeURIComponent(reparse[1] ?? '')
+        const vacancy = applications.some(item => item.vacancyId === id) ? vacancies.get(id) : undefined
+        if (!vacancy) return fail(res, 404, 'NOT_FOUND', `Vacancy ${id} not found`, requestId)
+        vacancy.parseStatus = 'pending'
+        vacancy.parseError = null
+        vacancy.updatedAt = new Date().toISOString()
+        setTimeout(() => {
+            if (vacancy.parseStatus !== 'pending') return
+            if (vacancy.rawText === '') settle(vacancy, 'failed', 'no_text')
+            else settle(vacancy, 'parsed')
+        }, parseDelayMs)
+        return send(
+            res,
+            202,
+            {
+                vacancyId: vacancy.id,
+                parseStatus: 'pending',
+            },
+            requestId,
+        )
     }
 
     if (method === 'POST' && path === '/api/v1/applications') {
@@ -533,14 +765,15 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
                     vacancyId: found.vacancyId ?? randomUUID(),
                     result: 'existing' as const,
                 }
+            const vacancy = newVacancy(url ?? null, text)
             const application: Application = {
                 id: randomUUID(),
                 company: '',
                 role: '',
                 vacancyUrl: url ?? null,
-                vacancyText: text,
+                vacancyText: '',
                 status: 'new',
-                vacancyId: randomUUID(),
+                vacancyId: vacancy.id,
                 parseStatus: 'pending',
                 createdAt: new Date().toISOString(),
             }

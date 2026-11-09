@@ -2,12 +2,15 @@ import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query'
 import { type ApiClient } from './client'
 import {
     type Application,
+    type ApplicationDetail,
     type ApplicationPage,
     type CreateApplicationInput,
     type ListApplicationsQuery,
 } from './types'
 
 export const APPLICATIONS_PAGE_SIZE = 20
+/** How often an application page asks again while its vacancy is being read. */
+export const PARSE_POLL_MS = 5_000
 
 /** Endpoints of the applications resource (tailor-api). The client is passed in: server or browser. */
 export const applicationsApi = {
@@ -17,7 +20,7 @@ export const applicationsApi = {
             signal,
         }),
     get: (api: ApiClient, id: string, signal?: AbortSignal) =>
-        api.request<Application>(`/api/v1/applications/${encodeURIComponent(id)}`, {
+        api.request<ApplicationDetail>(`/api/v1/applications/${encodeURIComponent(id)}`, {
             signal,
         }),
     /** Not used by the pages yet (applications are added by the pipeline, later). */
@@ -84,5 +87,7 @@ export const applicationQueries = {
         queryOptions({
             queryKey: applicationKeys.detail(id),
             queryFn: ({ signal }) => applicationsApi.get(api, id, signal),
+            // The vacancy is read in the background: ask again until it is done.
+            refetchInterval: query => (query.state.data?.vacancy?.parseStatus === 'pending' ? PARSE_POLL_MS : false),
         }),
 }

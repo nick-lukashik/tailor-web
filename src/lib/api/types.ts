@@ -11,9 +11,17 @@ type JsonOf<T> = T extends {
     ? Body
     : never
 
-export type Application = JsonOf<paths['/api/v1/applications/{id}']['get']['responses'][200]>
-export type ApplicationStatus = Application['status']
 export type ApplicationPage = JsonOf<paths['/api/v1/applications']['get']['responses'][200]>
+/** A row of the list. */
+export type Application = ApplicationPage['items'][number]
+export type ApplicationStatus = Application['status']
+/** One application with its vacancy and CV (GET /applications/{id}). */
+export type ApplicationDetail = JsonOf<paths['/api/v1/applications/{id}']['get']['responses'][200]>
+export type ApplicationVacancy = NonNullable<ApplicationDetail['vacancy']>
+export type ParsedVacancy = NonNullable<ApplicationVacancy['parsed']>
+export type VacancySalary = NonNullable<ParsedVacancy['salary']>
+export type ApplyChannel = ParsedVacancy['applyChannels'][number]
+export type ApplicationCv = ApplicationDetail['cv']
 export type ListApplicationsQuery = NonNullable<paths['/api/v1/applications']['get']['parameters']['query']>
 export type CreateApplicationInput = JsonOf<paths['/api/v1/applications']['post']['requestBody']>
 
@@ -31,3 +39,4 @@ export type VacancyIntakeInput = {
     items: VacancyIntakeItem[]
 }
 export type VacancyIntakeResult = JsonOf<paths['/api/v1/vacancies/intake']['post']['responses'][200]>
+export type VacancyParseQueued = JsonOf<paths['/api/v1/vacancies/{id}/parse']['post']['responses'][202]>

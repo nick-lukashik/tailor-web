@@ -41,7 +41,10 @@ test.describe('applications', () => {
         await expect(loadMore).toHaveCount(0)
     })
 
-    test('the application page shows the vacancy, its status and its CV link', async ({ page, backend }) => {
+    test('the application page shows the vacancy, its status and that there is no CV yet', async ({
+        page,
+        backend,
+    }) => {
         const application = await backend.create({
             company: uniqueTitle('Company'),
             role: 'Engineer',
@@ -57,18 +60,24 @@ test.describe('applications', () => {
         ).toBeVisible()
         await expect(page).toHaveTitle(`${application.company}: Engineer · ${en.meta.siteName}`)
         await expect(page.getByText(en.applications.status.new)).toBeVisible()
-        await expect(page.getByText('Written by Playwright for the application page.')).toBeVisible()
+        // The text sits in "Original text", closed until asked for.
+        const text = page.getByText('Written by Playwright for the application page.')
+        await expect(text).toBeHidden()
+        await page.getByText(detail.originalText).click()
+        await expect(text).toBeVisible()
 
         const vacancy = page.getByRole('link', {
             name: detail.vacancyLink,
         })
         await expect(vacancy).toHaveAttribute('href', 'https://example.com/jobs/e2e')
         await expect(vacancy).toHaveAttribute('rel', 'noopener noreferrer')
+        // No CV is made yet: the page says so and links nowhere.
+        await expect(page.getByText(en.applications.cv.none)).toBeVisible()
         await expect(
             page.getByRole('link', {
-                name: detail.cv,
+                name: en.applications.cv.open,
             }),
-        ).toHaveAttribute('href', new RegExp(`/${application.id}$`))
+        ).toHaveCount(0)
 
         await page
             .getByRole('link', {

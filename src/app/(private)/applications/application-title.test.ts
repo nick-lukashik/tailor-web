@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applicationTitle, vacancyHost } from './application-title'
+import { applicationRole, applicationTitle, vacancyHost } from './application-title'
 
 describe('vacancyHost', () => {
     it.each([
@@ -50,5 +50,51 @@ describe('applicationTitle', () => {
                 vacancyUrl: null,
             }),
         ).toBeNull()
+    })
+})
+
+describe('with the vacancy read', () => {
+    const vacancy = {
+        url: 'https://jobs.example.com/2',
+        parsed: {
+            company: 'Example GmbH',
+            title: 'Backend engineer',
+        },
+    }
+
+    it('takes the company and the role from the vacancy when the application has none', () => {
+        const application = {
+            company: '',
+            role: ' ',
+            vacancyUrl: null,
+            vacancy,
+        }
+        expect(applicationTitle(application)).toBe('Example GmbH')
+        expect(applicationRole(application)).toBe('Backend engineer')
+    })
+
+    it("keeps the application's own company and role", () => {
+        const application = {
+            company: 'Own Ltd',
+            role: 'Engineer',
+            vacancyUrl: null,
+            vacancy,
+        }
+        expect(applicationTitle(application)).toBe('Own Ltd')
+        expect(applicationRole(application)).toBe('Engineer')
+    })
+
+    it("falls back to the vacancy link's host, and no role", () => {
+        const application = {
+            company: '',
+            role: '',
+            vacancyUrl: null,
+            vacancy: {
+                url: 'https://jobs.example.com/2',
+                parsed: null,
+            },
+        }
+        expect(applicationTitle(application)).toBe('jobs.example.com')
+        expect(applicationRole(application)).toBeNull()
     })
 })

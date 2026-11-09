@@ -15,8 +15,6 @@ const schema = z
     .object({
         /** Backend base URL; the browser never sees it (it calls /api on this origin). */
         API_URL: unsetIfBlank(z.url().default('http://localhost:4000')),
-        /** Base of the public CV links (tailor-api's CV files): `${CV_URL}/<application id>` (tailor-api redirects to `<id>/<Name-Role-CV>.pdf`). In prod https://cv.<domain>. */
-        CV_URL: unsetIfBlank(z.url().default('http://localhost:4000/api/v1/cv')),
         /**
          * The account. Public origin of id-web (https://id.nick-lukashik.com),
          * id-api inside the cluster, and the key of the session cookie every site
@@ -69,7 +67,6 @@ const schema = z
         ...env,
         API_URL: env.API_URL.replace(/\/+$/, ''),
         SITE_URL: env.SITE_URL.replace(/\/+$/, ''),
-        CV_URL: env.CV_URL.replace(/\/+$/, ''),
         ID_URL: env.ID_URL?.replace(/\/+$/, ''),
         ID_API_URL: env.ID_API_URL?.replace(/\/+$/, ''),
     }))

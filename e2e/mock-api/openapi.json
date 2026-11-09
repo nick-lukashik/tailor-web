@@ -322,7 +322,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/Application"
+                                    "$ref": "#/components/schemas/ApplicationDetail"
                                 }
                             }
                         }
@@ -857,6 +857,109 @@
                     }
                 ],
                 "summary": "Links and texts of vacancies (1–200) into the caller's pool; unparsed, `pending`",
+                "tags": ["vacancies"]
+            }
+        },
+        "/api/v1/vacancies/{id}/parse": {
+            "post": {
+                "operationId": "VacanciesController_reparse_v1",
+                "parameters": [
+                    {
+                        "name": "x-request-id",
+                        "in": "header",
+                        "description": "Echoed back; generated when absent",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "id",
+                        "required": true,
+                        "in": "path",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/VacancyParseQueued"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "No valid access token (UNAUTHORIZED)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "The token lacks the tailor role (FORBIDDEN)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not found (NOT_FOUND)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal error (INTERNAL)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "A dependency (Postgres, tailor-tex) over its time budget or unavailable, retry later (UNAVAILABLE)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    },
+                    "504": {
+                        "description": "Request over its budget, 10 s unless the route says otherwise (TIMEOUT)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Error"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "bearer": []
+                    }
+                ],
+                "summary": "Parses a vacancy of the caller's pool again, in the background; `pending` until then",
                 "tags": ["vacancies"]
             }
         }
@@ -2388,6 +2491,298 @@
                     }
                 },
                 "required": ["created", "existing", "items"],
+                "additionalProperties": false
+            },
+            "ParsedVacancy": {
+                "type": "object",
+                "properties": {
+                    "title": {
+                        "nullable": true,
+                        "type": "string"
+                    },
+                    "company": {
+                        "nullable": true,
+                        "type": "string"
+                    },
+                    "companyDescription": {
+                        "nullable": true,
+                        "type": "string"
+                    },
+                    "seniority": {
+                        "nullable": true,
+                        "type": "string"
+                    },
+                    "location": {
+                        "nullable": true,
+                        "type": "string"
+                    },
+                    "remote": {
+                        "type": "string",
+                        "enum": ["remote", "hybrid", "onsite", "unknown"]
+                    },
+                    "regions": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "employmentType": {
+                        "nullable": true,
+                        "type": "string",
+                        "enum": ["full-time", "part-time", "contract", "freelance", "internship", "temporary"]
+                    },
+                    "salary": {
+                        "nullable": true,
+                        "type": "object",
+                        "properties": {
+                            "min": {
+                                "nullable": true,
+                                "type": "number"
+                            },
+                            "max": {
+                                "nullable": true,
+                                "type": "number"
+                            },
+                            "currency": {
+                                "nullable": true,
+                                "type": "string"
+                            },
+                            "period": {
+                                "nullable": true,
+                                "type": "string",
+                                "enum": ["hour", "day", "week", "month", "year"]
+                            }
+                        },
+                        "required": ["min", "max", "currency", "period"],
+                        "additionalProperties": false
+                    },
+                    "language": {
+                        "nullable": true,
+                        "type": "string"
+                    },
+                    "skills": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": {
+                                    "type": "string"
+                                },
+                                "required": {
+                                    "type": "boolean"
+                                }
+                            },
+                            "required": ["name", "required"],
+                            "additionalProperties": false
+                        }
+                    },
+                    "requirements": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "responsibilities": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "niceToHave": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "applyChannels": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "kind": {
+                                    "type": "string",
+                                    "enum": ["form", "email", "telegram", "link", "other"]
+                                },
+                                "value": {
+                                    "type": "string"
+                                }
+                            },
+                            "required": ["kind", "value"],
+                            "additionalProperties": false
+                        }
+                    },
+                    "summary": {
+                        "type": "string"
+                    },
+                    "warnings": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "required": [
+                    "title",
+                    "company",
+                    "companyDescription",
+                    "seniority",
+                    "location",
+                    "remote",
+                    "regions",
+                    "employmentType",
+                    "salary",
+                    "language",
+                    "skills",
+                    "requirements",
+                    "responsibilities",
+                    "niceToHave",
+                    "applyChannels",
+                    "summary",
+                    "warnings"
+                ],
+                "additionalProperties": false
+            },
+            "ApplicationVacancy": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "url": {
+                        "nullable": true,
+                        "type": "string"
+                    },
+                    "rawText": {
+                        "type": "string"
+                    },
+                    "parseStatus": {
+                        "type": "string",
+                        "enum": ["pending", "parsed", "failed"]
+                    },
+                    "parseError": {
+                        "nullable": true,
+                        "type": "string"
+                    },
+                    "updatedAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                    },
+                    "model": {
+                        "nullable": true,
+                        "type": "string"
+                    },
+                    "parsed": {
+                        "nullable": true,
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ParsedVacancy"
+                            }
+                        ]
+                    }
+                },
+                "required": ["id", "url", "rawText", "parseStatus", "parseError", "updatedAt", "model", "parsed"],
+                "additionalProperties": false
+            },
+            "ApplicationCv": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "enum": ["none", "generating", "ready"]
+                    },
+                    "url": {
+                        "type": "string",
+                        "format": "uri"
+                    }
+                },
+                "required": ["status"],
+                "additionalProperties": false
+            },
+            "ApplicationDetail": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "company": {
+                        "type": "string"
+                    },
+                    "role": {
+                        "type": "string"
+                    },
+                    "vacancyUrl": {
+                        "nullable": true,
+                        "type": "string"
+                    },
+                    "vacancyText": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": ["new", "sent", "interview", "offer", "rejected"]
+                    },
+                    "vacancyId": {
+                        "nullable": true,
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "parseStatus": {
+                        "nullable": true,
+                        "type": "string",
+                        "enum": ["pending", "parsed", "failed"]
+                    },
+                    "createdAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                    },
+                    "vacancy": {
+                        "nullable": true,
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ApplicationVacancy"
+                            }
+                        ]
+                    },
+                    "cv": {
+                        "$ref": "#/components/schemas/ApplicationCv"
+                    }
+                },
+                "required": [
+                    "id",
+                    "company",
+                    "role",
+                    "vacancyUrl",
+                    "vacancyText",
+                    "status",
+                    "vacancyId",
+                    "parseStatus",
+                    "createdAt",
+                    "vacancy",
+                    "cv"
+                ],
+                "additionalProperties": false
+            },
+            "VacancyParseQueued": {
+                "type": "object",
+                "properties": {
+                    "vacancyId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "parseStatus": {
+                        "type": "string",
+                        "enum": ["pending"]
+                    }
+                },
+                "required": ["vacancyId", "parseStatus"],
                 "additionalProperties": false
             }
         }
