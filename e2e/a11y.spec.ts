@@ -11,6 +11,7 @@ const WCAG = [
 const pages = [
     '/applications',
     '/applications/application-010',
+    '/applications/application-040',
     '/profile',
     '/nowhere',
 ]

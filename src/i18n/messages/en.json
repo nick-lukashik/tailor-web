@@ -46,7 +46,7 @@
         "detail": {
             "back": "All applications",
             "createdAt": "Added <time>{date}</time>",
-            "vacancyLink": "Vacancy page",
+            "vacancyLink": "Open vacancy",
             "emptyVacancyText": "No vacancy text.",
             "originalText": "Original text",
             "model": "Read by {model}"
@@ -154,8 +154,104 @@
             "rejected": "Not added:",
             "itemIssue": "Link {number}: {message}",
             "tooLarge": "Too much text at once.",
-            "failed": "Could not add it. Try again."
-        }
+            "failed": "Could not add it. Try again.",
+            "import": "Import file",
+            "importFile": "Vacancy file (JSON)",
+            "importing": "Importing… {done} of {total}",
+            "importProblem": {
+                "tooLarge": "The file is too large.",
+                "notJson": "The file isn't valid JSON.",
+                "shape": "The file needs an \"items\" list.",
+                "empty": "The file has no vacancies.",
+                "items": "Nothing was sent. {count, plural, one {# vacancy has a problem} other {# vacancies have problems}}: {list}.",
+                "more": "{count} more"
+            },
+            "importIssue": {
+                "notObject": "item {number} is not an object",
+                "url": "item {number} has an invalid link",
+                "text": "item {number} has a text over 100,000 characters",
+                "empty": "item {number} has no link or text",
+                "unknownKey": "item {number} has fields other than url and text"
+            },
+            "importChunkFailed": "Items {from}–{to} were not added: {reason}",
+            "importChunkFailedPlain": "Items {from}–{to} were not added. Try again."
+        },
+        "stage": {
+            "reading": "Reading",
+            "generating": "Generating",
+            "ready": "Ready to send",
+            "sent": "Sent",
+            "interview": "Interview",
+            "offer": "Offer",
+            "rejected": "Rejected",
+            "failed": "Failed",
+            "incomplete": "Incomplete"
+        },
+        "filters": {
+            "label": "Stage",
+            "all": "All",
+            "search": "Search by company or role",
+            "partial": "{count, plural, one {Counts cover the # loaded application.} other {Counts cover the # loaded applications.}} Load more to include the rest.",
+            "noMatch": "Nothing matches “{query}”.",
+            "showAll": "Show all",
+            "empty": {
+                "all": "No applications yet.",
+                "reading": "Nothing is being read.",
+                "generating": "Nothing is being generated.",
+                "ready": "Nothing is ready to send.",
+                "sent": "Nothing sent yet.",
+                "interview": "No interviews yet.",
+                "offer": "No offers yet.",
+                "rejected": "No rejections.",
+                "failed": "Nothing has failed."
+            }
+        },
+        "workspace": {
+            "cvLink": "CV link",
+            "status": "Status",
+            "markSent": "Mark as sent",
+            "markedSent": "Marked as sent",
+            "statusChanged": "Status: {status}",
+            "statusFailed": "Couldn't change the status."
+        },
+        "copy": {
+            "copy": "Copy",
+            "done": "{name} copied",
+            "failed": "Couldn't copy. Select the text and copy it by hand.",
+            "named": "Copy {name}"
+        },
+        "messages": {
+            "title": "Messages",
+            "tabs": "Message type",
+            "email": "Email",
+            "subject": "Subject",
+            "body": "Body",
+            "telegram": "Telegram",
+            "linkedin": "LinkedIn note",
+            "coverLetter": "Cover letter",
+            "whyMe": "Why me",
+            "length": "{count} / {max}",
+            "lengthLabel": "{count} of {max} characters",
+            "writeEmail": "Write email",
+            "generate": "Write messages",
+            "regenerate": "Regenerate",
+            "starting": "Starting…",
+            "started": "Writing new messages…",
+            "startFailed": "Couldn't start. Try again.",
+            "generating": "Writing messages…",
+            "generatingNewer": "Writing a new version. The current one stays until it is ready.",
+            "none": "No messages yet.",
+            "waitingCv": "Messages are written once the CV is ready.",
+            "noVacancy": "Messages are written from a vacancy, and this application has none.",
+            "version": "Version {version}",
+            "retry": "Try again",
+            "problem": {
+                "noProfile": "Fill in your profile first.",
+                "model": "The model couldn't finish.",
+                "failed": "Couldn't write the messages."
+            }
+        },
+        "error": "Something went wrong. Try again."
     },
     "error": {
         "title": "Something went wrong",

@@ -82,8 +82,13 @@ test.describe('CV of an application', () => {
                 exact: true,
             }),
         })
-        await expect(row).toContainText(cv.badge.ready)
-        await expect(row.getByRole('link')).toHaveCount(1)
+        // The list asks again while the messages are written after the CV.
+        await expect(row).toContainText(en.applications.stage.ready, POLLED)
+        await expect(
+            row.getByRole('link', {
+                name: cv.open,
+            }),
+        ).toHaveAttribute('href', `/applications/${item.applicationId}/cv`)
     })
 
     test('generates again while the ready CV stays linked', async ({ page }) => {

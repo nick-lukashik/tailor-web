@@ -4,12 +4,14 @@ import { useMutation } from '@tanstack/react-query'
 import { Loader2Icon } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { type FormEvent, useId, useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Field, FieldDescription, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { browserApi } from '@/lib/api/browser'
 import { INTAKE_MAX_ITEMS, vacancyMutations } from '@/lib/api/vacancies'
+import { ImportVacanciesButton } from './import-vacancies-button'
 import {
     type IntakeMode,
     type IntakeOutcome,
@@ -22,7 +24,8 @@ import {
 /**
  * "Add vacancy" above the pool: a link and/or the raw text of one vacancy, or
  * (Several links) one link per line, sent as one request. tailor-api checks the
- * rest; its refusal is shown here, the list refetches after a success.
+ * rest; what it refused is shown under the form, what came of it in a toast
+ * (added, already in the list, failed), and the list refetches after a success.
  */
 export function AddVacancyForm() {
     const t = useTranslations('applications.intake')
@@ -32,7 +35,6 @@ export function AddVacancyForm() {
     const [text, setText] = useState('')
     const [links, setLinks] = useState('')
     const [problem, setProblem] = useState<IntakeProblem | null>(null)
-    const [outcome, setOutcome] = useState<IntakeOutcome | null>(null)
     const intake = useMutation(vacancyMutations.intake(browserApi))
 
     const problemId = `${id}-problem`
@@ -42,7 +44,18 @@ export function AddVacancyForm() {
     const switchMode = () => {
         setMode(mode === 'single' ? 'batch' : 'single')
         setProblem(null)
-        setOutcome(null)
+    }
+
+    const announce = (outcome: IntakeOutcome) => {
+        if (outcome.kind === 'batch')
+            toast.success(
+                t('batchResult', {
+                    created: outcome.created,
+                    existing: outcome.existing,
+                }),
+            )
+        else if (outcome.kind === 'added') toast.success(t('added'))
+        else toast.info(t('existing'))
     }
 
     const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -60,7 +73,6 @@ export function AddVacancyForm() {
                       links,
                   }
         const checked = intakeInput(draft)
-        setOutcome(null)
         if ('problem' in checked) {
             setProblem(checked.problem)
             return
@@ -72,9 +84,14 @@ export function AddVacancyForm() {
                     setUrl('')
                     setText('')
                 } else setLinks('')
-                setOutcome(outcomeOf(mode, result))
+                announce(outcomeOf(mode, result))
             },
-            onError: error => setProblem(problemOf(error)),
+            onError: error => {
+                const found = problemOf(error)
+                // Nothing to fix in the form: say it in a toast and keep what was typed.
+                if (found.kind === 'failed' || found.kind === 'tooLarge') toast.error(t(found.kind))
+                else setProblem(found)
+            },
         })
     }
 
@@ -90,14 +107,17 @@ export function AddVacancyForm() {
                 >
                     {t('title')}
                 </h2>
-                <Button
-                    type="button"
-                    variant="link"
-                    size="sm"
-                    onClick={switchMode}
-                >
-                    {mode === 'single' ? t('toBatch') : t('toSingle')}
-                </Button>
+                <div className="flex flex-wrap items-center gap-1">
+                    <Button
+                        type="button"
+                        variant="link"
+                        size="sm"
+                        onClick={switchMode}
+                    >
+                        {mode === 'single' ? t('toBatch') : t('toSingle')}
+                    </Button>
+                    <ImportVacanciesButton />
+                </div>
             </div>
             <form
                 noValidate
@@ -171,16 +191,6 @@ export function AddVacancyForm() {
                     </Button>
                 </div>
                 <div aria-live="polite">
-                    {outcome && (
-                        <p>
-                            {outcome.kind === 'batch'
-                                ? t('batchResult', {
-                                      created: outcome.created,
-                                      existing: outcome.existing,
-                                  })
-                                : t(outcome.kind)}
-                        </p>
-                    )}
                     {problem && (
                         <div
                             id={problemId}

@@ -5,11 +5,12 @@ import { Loader2Icon } from 'lucide-react'
 import { useFormatter, useTranslations } from 'next-intl'
 import { type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { browserApi } from '@/lib/api/browser'
 import { type ApplicationVacancy, type ParsedVacancy } from '@/lib/api/types'
 import { vacancyMutations } from '@/lib/api/vacancies'
 import { cn } from '@/lib/utils'
-import { applyChannelLink, languageCode, parseProblem, salaryText } from './vacancy-format'
+import { languageCode, parseProblem, salaryText } from './vacancy-format'
 
 /**
  * What was read from the vacancy. While it is `pending` the page polls
@@ -39,6 +40,16 @@ export function VacancyDetails({ vacancy }: { vacancy: ApplicationVacancy }) {
                     />
                     {t('pending')}
                 </p>
+            )}
+            {vacancy.parseStatus === 'pending' && (
+                <div
+                    aria-hidden="true"
+                    className="grid gap-2"
+                >
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-5/6" />
+                    <Skeleton className="h-4 w-2/3" />
+                </div>
             )}
             {vacancy.parseStatus === 'failed' && <ParseFailed vacancy={vacancy} />}
             {vacancy.parseStatus === 'parsed' && vacancy.parsed && <Parsed parsed={vacancy.parsed} />}
@@ -123,35 +134,6 @@ function Parsed({ parsed }: { parsed: ParsedVacancy }) {
                 title={t('niceToHave')}
                 items={parsed.niceToHave}
             />
-            {parsed.applyChannels.length > 0 && (
-                <Part title={t('apply')}>
-                    <ul className="grid gap-1">
-                        {parsed.applyChannels.map((channel, index) => {
-                            const { href, label } = applyChannelLink(channel)
-                            return (
-                                <li
-                                    // biome-ignore lint/suspicious/noArrayIndexKey: a static list per answer
-                                    key={index}
-                                >
-                                    <span className="text-muted-foreground">{t(`channel.${channel.kind}`)}: </span>
-                                    {href ? (
-                                        <a
-                                            href={href}
-                                            target={href.startsWith('mailto:') ? undefined : '_blank'}
-                                            rel="noopener noreferrer"
-                                            className="break-all text-primary underline underline-offset-4 hover:no-underline"
-                                        >
-                                            {label}
-                                        </a>
-                                    ) : (
-                                        <span className="break-all">{label}</span>
-                                    )}
-                                </li>
-                            )
-                        })}
-                    </ul>
-                </Part>
-            )}
         </>
     )
 }

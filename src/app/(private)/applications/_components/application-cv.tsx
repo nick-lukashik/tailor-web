@@ -4,6 +4,7 @@ import { useMutation } from '@tanstack/react-query'
 import { Loader2Icon } from 'lucide-react'
 import { useTranslations } from 'next-intl'
 import { Button } from '@/components/ui/button'
+import { Skeleton } from '@/components/ui/skeleton'
 import { applicationMutations } from '@/lib/api/applications'
 import { browserApi } from '@/lib/api/browser'
 import { isApiError } from '@/lib/api/errors'
@@ -17,10 +18,11 @@ type Props = {
 }
 
 /**
- * The CV of this application. While a version is queued or generating the
- * page polls (applicationQueries.detail); a new one can be asked for once the
- * vacancy is read. The request lives here, not in its button, so a 409 stays
- * on screen after the refetch it causes.
+ * The CV of this application: its state, its details and "Generate again"
+ * (the link to open it is in the page's header). While a version is queued or
+ * generating the page polls (applicationQueries.detail); a new one can be
+ * asked for once the vacancy is read. The request lives here, not in its
+ * button, so a 409 stays on screen after the refetch it causes.
  */
 export function ApplicationCvBlock({ applicationId, cv, vacancy }: Props) {
     const t = useTranslations('applications.cv')
@@ -43,24 +45,6 @@ export function ApplicationCvBlock({ applicationId, cv, vacancy }: Props) {
                     />
                 )}
                 {generate.isPending ? t('starting') : label}
-            </Button>
-        </div>
-    )
-    const link = view.kind !== 'noVacancy' && view.kind !== 'waiting' && view.kind !== 'canGenerate' ? view.url : null
-    const openCv = link && (
-        <div>
-            <Button
-                asChild
-                size="lg"
-                variant={view.kind === 'ready' ? 'default' : 'outline'}
-            >
-                <a
-                    href={link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                >
-                    {t('open')}
-                </a>
             </Button>
         </div>
     )
@@ -107,24 +91,20 @@ export function ApplicationCvBlock({ applicationId, cv, vacancy }: Props) {
                         />
                         {t('generating')}
                     </p>
-                    {openCv}
+                    <Skeleton className="h-4 w-48" />
                 </>
             )}
             {view.kind === 'ready' && (
                 <>
-                    {openCv}
                     {details.length > 0 && <p className="text-xs text-muted-foreground">{details.join(' · ')}</p>}
                     {button(t('again'), 'outline')}
                 </>
             )}
             {view.kind === 'failed' && (
-                <>
-                    <div className="grid justify-items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/5 p-4">
-                        <p>{t(`problem.${view.problem}`)}</p>
-                        {button(t('retry'), 'outline')}
-                    </div>
-                    {openCv}
-                </>
+                <div className="grid justify-items-start gap-3 rounded-lg border border-destructive/40 bg-destructive/5 p-4">
+                    <p>{t(`problem.${view.problem}`)}</p>
+                    {button(t('retry'), 'outline')}
+                </div>
             )}
             {generate.isError && (
                 <p

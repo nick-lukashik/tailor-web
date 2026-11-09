@@ -24,9 +24,16 @@
 // version 1 for its applications without one, as tailor-api does; POST
 // /api/v1/applications/<id>/cv (202) queues the next (409 while one is queued or
 // generating, or the vacancy is not parsed). A version is `generating` after
-// MOCK_CV_MS and `ready` with a cv.example.com link after as long again. Seed:
-// application-010 is parsed (no CV yet), 009 failed with no text, 008 pending, 007
-// failed with a text.
+// MOCK_CV_MS and `ready` with a cv.example.com link after as long again. A ready
+// CV queues the next materials version (the texts for applying by hand), as
+// tailor-api does; POST /api/v1/applications/<id>/materials (202) queues one (409
+// without a ready CV or while one is queued or generating); it goes the same
+// way as a CV. POST /__mock/applications/<id>/materials {"status": "failed",
+// "error"?} fails the newest one. PATCH /api/v1/applications/<id> {"status"} sets
+// the status. List rows carry `materialsStatus`, the detail `materials`. Seed:
+// application-040 (on the first page) is ready to send (status new, CV and
+// materials ready), 010 is
+// parsed (no CV yet), 009 failed with no text, 008 pending, 007 failed with a text.
 import { randomUUID } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
@@ -88,6 +95,22 @@ type CvVersion = {
     fileName: string | null
     updatedAt: string
 }
+type MaterialsContent = {
+    language: 'en' | 'ru'
+    coverLetter: string
+    emailSubject: string
+    emailBody: string
+    telegramMessage: string
+    linkedinNote: string
+    whyMe: string[]
+}
+type MaterialsVersion = {
+    version: number
+    status: 'queued' | 'generating' | 'ready' | 'failed'
+    error: string | null
+    content: MaterialsContent | null
+    updatedAt: string
+}
 type Vacancy = {
     id: string
     url: string | null
@@ -123,6 +146,8 @@ let applications: Application[] = []
 let vacancies = new Map<string, Vacancy>()
 /** CV versions per application, oldest first. */
 let cvs = new Map<string, CvVersion[]>()
+/** Materials versions per application, oldest first. */
+let materials = new Map<string, MaterialsVersion[]>()
 let received: Received[] = []
 type StoredProfile = {
     version: number
@@ -335,9 +360,90 @@ function queueCv(applicationId: string): CvVersion {
             cv.pages = 2
             cv.fileName = MOCK_CV_FILE_NAME
             cv.updatedAt = new Date().toISOString()
+            queueMaterials(applicationId)
         }, cvStepMs)
     }, cvStepMs)
     return cv
+}
+
+function cvUrlOf(applicationId: string): string | null {
+    const ready = cvs.get(applicationId)?.findLast(version => version.status === 'ready')
+    return ready?.fileName ? `${CV_PUBLIC_URL}/${applicationId}/${ready.fileName}` : null
+}
+
+/** What the mock "writes" for an application: the CV link in the e-mail and the messages. */
+function contentOf(applicationId: string): MaterialsContent {
+    const application = applications.find(item => item.id === applicationId)
+    const company = application?.company || 'Example GmbH'
+    const role = application?.role || 'Senior backend engineer'
+    const cvUrl = cvUrlOf(applicationId) ?? `${CV_PUBLIC_URL}/${applicationId}/CV.pdf`
+    return {
+        language: 'en',
+        coverLetter: `Dear ${company} team,\n\nI would like to apply for the ${role} role. I have built and run TypeScript APIs on PostgreSQL for years.\n\nKind regards,\nAlex Example`,
+        emailSubject: `${role}: Alex Example`,
+        emailBody: `Hello,\n\nI am applying for the ${role} role at ${company}. My CV: ${cvUrl}\n\nBest,\nAlex Example`,
+        telegramMessage: `Hi! I'd like to apply for the ${role} role at ${company}. CV: ${cvUrl}`,
+        linkedinNote: `Hi, I applied for the ${role} role at ${company} and would be glad to connect.`,
+        whyMe: [
+            'Five years of backend work in TypeScript',
+            'Runs PostgreSQL in production',
+            'Written English every day',
+        ],
+    }
+}
+
+/** Queues a materials version; as the job would, it is `generating`, then `ready` with its texts. */
+function queueMaterials(applicationId: string): MaterialsVersion {
+    const versions = materials.get(applicationId) ?? []
+    const version: MaterialsVersion = {
+        version: versions.length + 1,
+        status: 'queued',
+        error: null,
+        content: null,
+        updatedAt: new Date().toISOString(),
+    }
+    materials.set(applicationId, [
+        ...versions,
+        version,
+    ])
+    setTimeout(() => {
+        if (version.status !== 'queued') return
+        version.status = 'generating'
+        version.updatedAt = new Date().toISOString()
+        setTimeout(() => {
+            if (version.status !== 'generating') return
+            version.status = 'ready'
+            version.content = contentOf(applicationId)
+            version.updatedAt = new Date().toISOString()
+        }, cvStepMs)
+    }, cvStepMs)
+    return version
+}
+
+/** The newest version's status and error; the texts of the newest ready one. */
+function materialsOf(applicationId: string) {
+    const versions = materials.get(applicationId) ?? []
+    const latest = versions.at(-1)
+    if (!latest)
+        return {
+            status: 'none' as const,
+        }
+    const ready = versions.findLast(version => version.status === 'ready')
+    return {
+        status: latest.status,
+        version: latest.version,
+        ...(ready?.content
+            ? {
+                  content: ready.content,
+              }
+            : {}),
+        ...(latest.error
+            ? {
+                  error: latest.error,
+              }
+            : {}),
+        updatedAt: latest.updatedAt,
+    }
 }
 
 /** After a parse: version 1 for every application of the vacancy without a CV. */
@@ -391,6 +497,7 @@ function row(application: Application) {
         ...application,
         parseStatus: vacancy ? vacancy.parseStatus : application.parseStatus,
         cvStatus: cvOf(application.id).status,
+        materialsStatus: materialsOf(application.id).status,
     }
 }
 
@@ -399,6 +506,7 @@ function seed() {
     profiles = new Map()
     vacancies = new Map()
     cvs = new Map()
+    materials = new Map()
     const start = Date.parse('2026-10-01T09:00:00.000Z')
     applications = Array.from(
         {
@@ -424,6 +532,11 @@ function seed() {
         'parsed' | 'failed' | 'pending',
         string | null,
     ][] = [
+        [
+            40,
+            'parsed',
+            null,
+        ],
         [
             10,
             'parsed',
@@ -454,6 +567,31 @@ function seed() {
         if (parseStatus !== 'pending') settle(vacancy, parseStatus, parseError)
         if (parseStatus === 'parsed')
             vacancy.parsed = parsedOf(application.company, application.role || 'Senior backend engineer')
+    }
+    // Ready to send: its CV and its materials are made, nothing is sent yet.
+    const ready = applications.find(item => item.id === 'application-040')
+    if (ready) {
+        const updatedAt = new Date(start).toISOString()
+        cvs.set(ready.id, [
+            {
+                version: 1,
+                status: 'ready',
+                model: MOCK_MODEL,
+                error: null,
+                pages: 2,
+                fileName: MOCK_CV_FILE_NAME,
+                updatedAt,
+            },
+        ])
+        materials.set(ready.id, [
+            {
+                version: 1,
+                status: 'ready',
+                error: null,
+                content: contentOf(ready.id),
+                updatedAt,
+            },
+        ])
     }
 }
 
@@ -559,6 +697,23 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
             return fail(res, 404, 'NOT_FOUND', 'No such vacancy or status', requestId)
         settle(vacancy, body.parseStatus, typeof body.parseError === 'string' ? body.parseError : null)
         queueFirstCvs(vacancy)
+        return send(res, 204, undefined, requestId)
+    }
+
+    const materialsHook = path.match(/^\/__mock\/applications\/([^/]+)\/materials$/)
+    if (method === 'POST' && materialsHook) {
+        const latest = materials.get(decodeURIComponent(materialsHook[1] ?? ''))?.at(-1)
+        const body = (await readJson(req)) as
+            | {
+                  status?: unknown
+                  error?: unknown
+              }
+            | undefined
+        if (!latest || body?.status !== 'failed')
+            return fail(res, 404, 'NOT_FOUND', 'No such materials or status', requestId)
+        latest.status = 'failed'
+        latest.error = typeof body.error === 'string' ? body.error : 'llm_bad_request'
+        latest.updatedAt = new Date().toISOString()
         return send(res, 204, undefined, requestId)
     }
 
@@ -693,6 +848,63 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
                 ...row(application),
                 vacancy: (application.vacancyId && vacancies.get(application.vacancyId)) || null,
                 cv: cvOf(application.id),
+                materials: materialsOf(application.id),
+            },
+            requestId,
+        )
+    }
+
+    if (method === 'PATCH' && detail) {
+        const id = decodeURIComponent(detail[1] ?? '')
+        let input: unknown
+        try {
+            input = await readJson(req, record)
+        } catch {
+            return fail(res, 400, 'VALIDATION_FAILED', 'Body is not JSON', requestId, [])
+        }
+        const body = (input ?? {}) as Record<string, unknown>
+        const unknown = Object.keys(body).filter(key => key !== 'status')
+        const status = statuses.find(value => value === body.status)
+        if (!status || unknown.length > 0)
+            return fail(res, 400, 'VALIDATION_FAILED', 'Request validation failed', requestId, [
+                ...(status
+                    ? []
+                    : [
+                          {
+                              path: 'status',
+                              message: `Invalid option: expected one of ${statuses.map(value => `"${value}"`).join('|')}`,
+                          },
+                      ]),
+                ...unknown.map(key => ({
+                    path: '',
+                    message: `Unrecognized key: "${key}"`,
+                })),
+            ])
+        const application = applications.find(item => item.id === id)
+        if (!application) return fail(res, 404, 'NOT_FOUND', 'Application not found', requestId)
+        if (application.company.startsWith('!fail')) return fail(res, 500, 'INTERNAL', 'Mock failure', requestId)
+        application.status = status
+        return send(res, 200, row(application), requestId)
+    }
+
+    const generateMaterials = path.match(/^\/api\/v1\/applications\/([^/]+)\/materials$/)
+    if (method === 'POST' && generateMaterials) {
+        const id = decodeURIComponent(generateMaterials[1] ?? '')
+        const application = applications.find(item => item.id === id)
+        if (!application) return fail(res, 404, 'NOT_FOUND', 'Application not found', requestId)
+        if (!cvUrlOf(id))
+            return fail(res, 409, 'CONFLICT', 'No CV of this application is ready: its materials follow it', requestId)
+        const latest = materials.get(id)?.at(-1)
+        if (latest?.status === 'queued' || latest?.status === 'generating')
+            return fail(res, 409, 'CONFLICT', 'The materials of this application are already being written', requestId)
+        const version = queueMaterials(id)
+        return send(
+            res,
+            202,
+            {
+                status: 'queued',
+                version: version.version,
+                updatedAt: version.updatedAt,
             },
             requestId,
         )

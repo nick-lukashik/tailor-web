@@ -47,7 +47,8 @@ component's docs and examples, and `pnpm exec shadcn mcp init` sets up the shadc
   blocked. Styles React sets in the browser (after hydration, through the DOM) are not.
 - So avoid components or props that render `style` on the server. Radix parts that do: `VisuallyHidden`
   (and what uses it, such as Select's native fallback), Popper-positioned content when open on first render,
-  ScrollArea, NavigationMenu viewport. Check the HTML of a new component with `curl` before relying on it.
+  ScrollArea, NavigationMenu viewport, Tabs (its content renders `animation-duration: 0s`; the messages of an
+  application use a small tablist of their own). Check the HTML of a new component with `curl` before relying on it.
 - A component that injects a `<style>` element (Sonner does) needs its stylesheet's hash in
   `STYLE_HASHES` (`src/lib/security/csp.ts`); `csp.test.ts` shows how to compute it.
 - `pnpm test:e2e` fails on any CSP violation in the console.
