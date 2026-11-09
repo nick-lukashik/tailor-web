@@ -349,9 +349,8 @@ describe('ApplyHeader', () => {
     it('opens the vacancy and the CV, copies the CV link and offers "Mark as sent"', () => {
         const html = renderView(ready)
         expect(html).toContain(`>${stage.ready}</span>`)
-        expect(html).toMatch(
-            new RegExp(`<a[^>]*href="${CV_URL.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"[^>]*target="_blank"`),
-        )
+        const cvLink = html.match(/<a[^>]*>/g)?.find(tag => tag.includes(`href="${CV_URL}"`))
+        expect(cvLink).toContain('target="_blank"')
         expect(html).toContain(`${cvText.open}</a>`)
         expect(html).toContain(`aria-label="Copy ${workspace.cvLink}"`)
         expect(html).toContain(`${workspace.markSent}</button>`)
