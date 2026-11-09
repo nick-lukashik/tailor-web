@@ -41,10 +41,7 @@ test.describe('applications', () => {
         await expect(loadMore).toHaveCount(0)
     })
 
-    test('the application page shows the vacancy, its status and that there is no CV yet', async ({
-        page,
-        backend,
-    }) => {
+    test('the application page shows the vacancy, its status and that there is no CV', async ({ page, backend }) => {
         const application = await backend.create({
             company: uniqueTitle('Company'),
             role: 'Engineer',
@@ -71,8 +68,8 @@ test.describe('applications', () => {
         })
         await expect(vacancy).toHaveAttribute('href', 'https://example.com/jobs/e2e')
         await expect(vacancy).toHaveAttribute('rel', 'noopener noreferrer')
-        // No CV is made yet: the page says so and links nowhere.
-        await expect(page.getByText(en.applications.cv.none)).toBeVisible()
+        // No vacancy behind it, so no CV: the page says so and links nowhere.
+        await expect(page.getByText(en.applications.cv.noVacancy)).toBeVisible()
         await expect(
             page.getByRole('link', {
                 name: en.applications.cv.open,

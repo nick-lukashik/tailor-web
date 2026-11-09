@@ -1,16 +1,26 @@
-import { infiniteQueryOptions, queryOptions } from '@tanstack/react-query'
+import { infiniteQueryOptions, mutationOptions, queryOptions } from '@tanstack/react-query'
 import { type ApiClient } from './client'
 import {
     type Application,
     type ApplicationDetail,
     type ApplicationPage,
     type CreateApplicationInput,
+    type CvQueued,
     type ListApplicationsQuery,
 } from './types'
 
 export const APPLICATIONS_PAGE_SIZE = 20
-/** How often an application page asks again while its vacancy is being read. */
-export const PARSE_POLL_MS = 5_000
+/** How often an application page asks again while its vacancy is read or its CV is made. */
+export const DETAIL_POLL_MS = 5_000
+
+/** Still in the works on the API: the page keeps asking. */
+export function detailInProgress(application: Pick<ApplicationDetail, 'vacancy' | 'cv'>): boolean {
+    return (
+        application.vacancy?.parseStatus === 'pending'
+        || application.cv.status === 'queued'
+        || application.cv.status === 'generating'
+    )
+}
 
 /** Endpoints of the applications resource (tailor-api). The client is passed in: server or browser. */
 export const applicationsApi = {
@@ -22,6 +32,11 @@ export const applicationsApi = {
     get: (api: ApiClient, id: string, signal?: AbortSignal) =>
         api.request<ApplicationDetail>(`/api/v1/applications/${encodeURIComponent(id)}`, {
             signal,
+        }),
+    /** Queues a new CV version (202); 409 while one is in the works or the vacancy is not parsed yet. */
+    generateCv: (api: ApiClient, id: string) =>
+        api.request<CvQueued>(`/api/v1/applications/${encodeURIComponent(id)}/cv`, {
+            method: 'POST',
         }),
     /** Not used by the pages yet (applications are added by the pipeline, later). */
     create: (api: ApiClient, input: CreateApplicationInput) =>
@@ -61,6 +76,11 @@ export const applicationKeys = {
             ...applicationKeys.details(),
             id,
         ] as const,
+    generateCv: () =>
+        [
+            ...applicationKeys.all,
+            'generate-cv',
+        ] as const,
 }
 
 /**
@@ -87,7 +107,23 @@ export const applicationQueries = {
         queryOptions({
             queryKey: applicationKeys.detail(id),
             queryFn: ({ signal }) => applicationsApi.get(api, id, signal),
-            // The vacancy is read in the background: ask again until it is done.
-            refetchInterval: query => (query.state.data?.vacancy?.parseStatus === 'pending' ? PARSE_POLL_MS : false),
+            // The vacancy is read and the CV made in the background: ask again until they are done.
+            refetchInterval: query => (query.state.data && detailInProgress(query.state.data) ? DETAIL_POLL_MS : false),
+        }),
+}
+
+export const applicationMutations = {
+    /**
+     * A new CV version: the page and the lists refetch, after a 409 too (a
+     * version may already be in the works), and the page polls while it is.
+     */
+    generateCv: (api: ApiClient) =>
+        mutationOptions({
+            mutationKey: applicationKeys.generateCv(),
+            mutationFn: (id: string) => applicationsApi.generateCv(api, id),
+            onSettled: (_result, _error, _id, _onMutateResult, context) =>
+                context.client.invalidateQueries({
+                    queryKey: applicationKeys.all,
+                }),
         }),
 }

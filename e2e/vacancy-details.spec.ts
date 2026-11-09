@@ -52,8 +52,17 @@ test.describe('vacancy on the application page', () => {
             }),
         ).toHaveAttribute('href', 'https://jobs.example.com/apply')
 
-        await expect(page.getByText(cv.none)).toBeVisible()
-        await expect(page.locator('a[href*="/cv"]')).toHaveCount(0)
+        // Read before CVs were made: no CV yet, one can be asked for.
+        await expect(
+            page.getByRole('button', {
+                name: cv.generate,
+            }),
+        ).toBeVisible()
+        await expect(
+            page.getByRole('link', {
+                name: cv.open,
+            }),
+        ).toHaveCount(0)
     })
 
     test('says there is no text to read', async ({ page }) => {
@@ -72,6 +81,12 @@ test.describe('vacancy on the application page', () => {
             .click()
         await expect(page.getByText('Senior backend engineer at Example GmbH')).toBeVisible(POLLED)
         await expect(page.getByText(text.failed)).toHaveCount(0)
+        // A vacancy just read gets its first CV, as tailor-api queues it.
+        await expect(
+            page.getByRole('link', {
+                name: cv.open,
+            }),
+        ).toBeVisible(POLLED)
     })
 
     test('waits while the vacancy is read, then shows it', async ({ page, request, backend }) => {

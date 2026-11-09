@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { type Application } from '@/lib/api/types'
 import { applicationTitle } from '../application-title'
 import { ApplicationDate } from './application-date'
+import { CvBadge } from './cv-badge'
 import { ParseBadge } from './parse-badge'
 import { StatusBadge } from './status-badge'
 
@@ -27,6 +28,7 @@ export function ApplicationItem({ application }: { application: Application }) {
                         </h3>
                         <div className="flex flex-wrap items-center gap-2">
                             <ParseBadge status={application.parseStatus} />
+                            <CvBadge status={application.cvStatus} />
                             <StatusBadge status={application.status} />
                         </div>
                     </div>

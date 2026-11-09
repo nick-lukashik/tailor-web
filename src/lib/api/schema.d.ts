@@ -45,9 +45,30 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** One of the caller's applications with its vacancy (text and parse) and CV status */
         get: operations["ApplicationsController_get_v1"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/applications/{id}/cv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue a new version of the CV of one of the caller's applications, tailored to its vacancy
+         * @description 409 when the vacancy is not parsed yet or a version is still queued or generating.
+         */
+        post: operations["CvGenerationController_create_v1"];
         delete?: never;
         options?: never;
         head?: never;
@@ -115,7 +136,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Links and texts of vacancies (1–200) into the caller's pool; unparsed, `pending` */
+        /** Links and texts of vacancies (1–200) into the caller's pool; each new text is parsed in the background */
         post: operations["VacanciesController_intake_v1"];
         delete?: never;
         options?: never;
@@ -151,7 +172,7 @@ export interface components {
         };
         Error: {
             /** @enum {string} */
-            code: "VALIDATION_FAILED" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "PAYLOAD_TOO_LARGE" | "UNPROCESSABLE" | "RATE_LIMITED" | "INTERNAL" | "UNAVAILABLE" | "TIMEOUT";
+            code: "VALIDATION_FAILED" | "UNAUTHORIZED" | "FORBIDDEN" | "NOT_FOUND" | "CONFLICT" | "PAYLOAD_TOO_LARGE" | "UNPROCESSABLE" | "RATE_LIMITED" | "INTERNAL" | "UNAVAILABLE" | "TIMEOUT";
             message: string;
             details?: {
                 path: string;
@@ -176,8 +197,88 @@ export interface components {
             vacancyId: string | null;
             /** @enum {string|null} */
             parseStatus: "pending" | "parsed" | "failed" | null;
+            /** @enum {string} */
+            cvStatus: "none" | "queued" | "generating" | "ready" | "failed";
             /** Format: date-time */
             createdAt: string;
+        };
+        ApplicationDetail: {
+            /** Format: uuid */
+            id: string;
+            company: string;
+            role: string;
+            vacancyUrl: string | null;
+            vacancyText: string;
+            /** @enum {string} */
+            status: "new" | "sent" | "interview" | "offer" | "rejected";
+            /** Format: uuid */
+            vacancyId: string | null;
+            /** @enum {string|null} */
+            parseStatus: "pending" | "parsed" | "failed" | null;
+            /** @enum {string} */
+            cvStatus: "none" | "queued" | "generating" | "ready" | "failed";
+            /** Format: date-time */
+            createdAt: string;
+            vacancy: components["schemas"]["ApplicationVacancy"] | null;
+            cv: components["schemas"]["ApplicationCv"];
+        };
+        ApplicationVacancy: {
+            /** Format: uuid */
+            id: string;
+            url: string | null;
+            rawText: string;
+            /** @enum {string} */
+            parseStatus: "pending" | "parsed" | "failed";
+            parseError: string | null;
+            /** Format: date-time */
+            updatedAt: string;
+            model: string | null;
+            parsed: components["schemas"]["ParsedVacancy"] | null;
+        };
+        ParsedVacancy: {
+            title: string | null;
+            company: string | null;
+            companyDescription: string | null;
+            seniority: string | null;
+            location: string | null;
+            /** @enum {string} */
+            remote: "remote" | "hybrid" | "onsite" | "unknown";
+            regions: string[];
+            /** @enum {string|null} */
+            employmentType: "full-time" | "part-time" | "contract" | "freelance" | "internship" | "temporary" | null;
+            salary: {
+                min: number | null;
+                max: number | null;
+                currency: string | null;
+                /** @enum {string|null} */
+                period: "hour" | "day" | "week" | "month" | "year" | null;
+            } | null;
+            language: string | null;
+            skills: {
+                name: string;
+                required: boolean;
+            }[];
+            requirements: string[];
+            responsibilities: string[];
+            niceToHave: string[];
+            applyChannels: {
+                /** @enum {string} */
+                kind: "form" | "email" | "telegram" | "link" | "other";
+                value: string;
+            }[];
+            summary: string;
+            warnings: string[];
+        };
+        ApplicationCv: {
+            /** @enum {string} */
+            status: "none" | "queued" | "generating" | "ready" | "failed";
+            version?: number;
+            url?: string;
+            pages?: number;
+            model?: string;
+            error?: string;
+            /** Format: date-time */
+            updatedAt?: string;
         };
         CreateApplication: {
             company: string;
@@ -565,6 +666,11 @@ export interface components {
             cvShowLocation: boolean;
             /** @default true */
             cvShowPhone: boolean;
+            /** @default {} */
+            promptAdditions: {
+                /** @default  */
+                cv: string;
+            };
         };
         SavedProfile: {
             version: number;
@@ -592,77 +698,6 @@ export interface components {
                 /** @enum {string} */
                 result: "created" | "existing";
             }[];
-        };
-        ParsedVacancy: {
-            title: string | null;
-            company: string | null;
-            companyDescription: string | null;
-            seniority: string | null;
-            location: string | null;
-            /** @enum {string} */
-            remote: "remote" | "hybrid" | "onsite" | "unknown";
-            regions: string[];
-            /** @enum {string|null} */
-            employmentType: "full-time" | "part-time" | "contract" | "freelance" | "internship" | "temporary" | null;
-            salary: {
-                min: number | null;
-                max: number | null;
-                currency: string | null;
-                /** @enum {string|null} */
-                period: "hour" | "day" | "week" | "month" | "year" | null;
-            } | null;
-            language: string | null;
-            skills: {
-                name: string;
-                required: boolean;
-            }[];
-            requirements: string[];
-            responsibilities: string[];
-            niceToHave: string[];
-            applyChannels: {
-                /** @enum {string} */
-                kind: "form" | "email" | "telegram" | "link" | "other";
-                value: string;
-            }[];
-            summary: string;
-            warnings: string[];
-        };
-        ApplicationVacancy: {
-            /** Format: uuid */
-            id: string;
-            url: string | null;
-            rawText: string;
-            /** @enum {string} */
-            parseStatus: "pending" | "parsed" | "failed";
-            parseError: string | null;
-            /** Format: date-time */
-            updatedAt: string;
-            model: string | null;
-            parsed: components["schemas"]["ParsedVacancy"] | null;
-        };
-        ApplicationCv: {
-            /** @enum {string} */
-            status: "none" | "generating" | "ready";
-            /** Format: uri */
-            url?: string;
-        };
-        ApplicationDetail: {
-            /** Format: uuid */
-            id: string;
-            company: string;
-            role: string;
-            vacancyUrl: string | null;
-            vacancyText: string;
-            /** @enum {string} */
-            status: "new" | "sent" | "interview" | "offer" | "rejected";
-            /** Format: uuid */
-            vacancyId: string | null;
-            /** @enum {string|null} */
-            parseStatus: "pending" | "parsed" | "failed" | null;
-            /** Format: date-time */
-            createdAt: string;
-            vacancy: components["schemas"]["ApplicationVacancy"] | null;
-            cv: components["schemas"]["ApplicationCv"];
         };
         VacancyParseQueued: {
             /** Format: uuid */
@@ -944,6 +979,90 @@ export interface operations {
             };
             /** @description Not found (NOT_FOUND) */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Internal error (INTERNAL) */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description A dependency (Postgres, tailor-tex) over its time budget or unavailable, retry later (UNAVAILABLE) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Request over its budget, 10 s unless the route says otherwise (TIMEOUT) */
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    CvGenerationController_create_v1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApplicationCv"];
+                };
+            };
+            /** @description No valid access token (UNAUTHORIZED) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description The token lacks the tailor role (FORBIDDEN) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Not found (NOT_FOUND) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description Conflicts with the current state (CONFLICT) */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

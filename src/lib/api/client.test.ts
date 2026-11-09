@@ -291,4 +291,15 @@ describe('pathOf', () => {
         ).toBe('FORBIDDEN')
         expect(toApiError(401, undefined).code).toBe('UNAUTHORIZED')
     })
+
+    it('keeps the message of a CONFLICT, the 409 of tailor-api', () => {
+        const error = toApiError(409, {
+            code: 'CONFLICT',
+            message: 'A CV of this application is already being made',
+            requestId: 'r',
+        })
+        expect(error.code).toBe('CONFLICT')
+        expect(error.message).toBe('A CV of this application is already being made')
+        expect(toApiError(409, undefined).code).toBe('CONFLICT')
+    })
 })
